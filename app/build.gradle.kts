@@ -35,6 +35,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -62,5 +63,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation("com.google.android.material:material:1.14.0")
+    implementation(libs.firebase.auth)
 }
 
