@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.App" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowBackground">#131313</item>
+        <item name="android:windowBackground">#000000</item>
     </style>
 </resources>
