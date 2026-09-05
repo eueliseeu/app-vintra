@@ -4,9 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.vintra.app.ui.auth.LoginScreen
+import com.vintra.app.ui.home.HomeScreen
+import com.vintra.app.ui.profile.ProfileSetupScreen
+import com.vintra.app.ui.session.SessionRouter
 import com.vintra.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import com.vintra.app.ui.theme.DarkBackground
+
+private sealed interface AppDestination {
+    data object Login : AppDestination
+    data object SessionRouter : AppDestination
+    data object ProfileSetup : AppDestination
+    data object Home : AppDestination
+}
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -15,11 +34,27 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                LoginScreen(
-                    onLoginSuccess = {
-                        // TODO: navegar para a Home quando o Navigation Compose for adicionado
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = DarkBackground
+                ) {
+                    var destination by remember { mutableStateOf<AppDestination>(AppDestination.SessionRouter) }
+
+                    when (destination) {
+                        AppDestination.Login -> LoginScreen(
+                            onLoginSuccess = { destination = AppDestination.SessionRouter }
+                        )
+                        AppDestination.SessionRouter -> SessionRouter(
+                            onNavigateProfileSetup = { destination = AppDestination.ProfileSetup },
+                            onNavigateHome = { destination = AppDestination.Home },
+                            onNavigateLogin = { destination = AppDestination.Login }
+                        )
+                        AppDestination.ProfileSetup -> ProfileSetupScreen(
+                            onSaved = { destination = AppDestination.Home }
+                        )
+                        AppDestination.Home -> HomeScreen()
                     }
-                )
+                }
             }
         }
     }

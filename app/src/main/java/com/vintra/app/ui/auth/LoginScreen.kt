@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -42,6 +43,7 @@ import com.vintra.app.ui.components.CenterToast
 import com.vintra.app.ui.theme.FieldBackground
 import kotlinx.coroutines.delay
 import com.vintra.app.ui.theme.DarkBackground
+import com.vintra.app.ui.components.appTextFieldColors
 
 private const val TOAST_DURATION_MS = 2500L
 
@@ -66,7 +68,7 @@ fun LoginScreen(
 
     Box(modifier = Modifier.fillMaxSize() .background(DarkBackground)
 
-    ) {
+     ) {
         when (uiState.step) {
             LoginScreenStep.FORM -> LoginForm(uiState = uiState, viewModel = viewModel)
             LoginScreenStep.ACCOUNT_CREATED -> AccountCreatedScreen(
@@ -149,7 +151,7 @@ private fun LoginForm(
                 .height(52.dp)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.height(20.dp))
+                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
             } else {
                 Text(text = "Acessar sua Conta", fontWeight = FontWeight.Bold)
             }
@@ -216,4 +218,4 @@ private fun loginFieldColors() = TextFieldDefaults.colors(
 )
 
 private fun buildVersionLabel(): String =
-    if (BuildConfig.DEBUG) "Versão do Vintra • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
+    if (BuildConfig.DEBUG) "Version Vintra • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
