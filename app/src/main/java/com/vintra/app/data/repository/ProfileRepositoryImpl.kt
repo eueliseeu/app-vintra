@@ -2,8 +2,10 @@ package com.vintra.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.vintra.app.domain.model.UserProfile
+import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ProfileRepository
 import com.vintra.app.domain.repository.SaveProfileResult
+import com.vintra.app.domain.repository.UsernameAvailability
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -14,26 +16,37 @@ class ProfileRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ProfileRepository {
 
-    override suspend fun getProfile(uid: String): Result<UserProfile?> = runCatching {
+    override suspend fun getProfile(uid: String): GetProfileResult = try {
         val snapshot = firestore.collection(COLLECTION_USERS).document(uid).get().await()
-        if (!snapshot.exists()) return@runCatching null
 
-        UserProfile(
-            uid = uid,
-            name = snapshot.getString("name").orEmpty(),
-            username = snapshot.getString("username").orEmpty(),
-            email = snapshot.getString("email").orEmpty(),
-            birthDateMillis = snapshot.getLong("birthDateMillis") ?: 0L,
-            nationality = snapshot.getString("nationality").orEmpty(),
-            createdAt = snapshot.getLong("createdAt") ?: 0L,
-            updatedAt = snapshot.getLong("updatedAt") ?: 0L
-        )
+        if (!snapshot.exists()) {
+            GetProfileResult.Success(null)
+        } else {
+            val profile = UserProfile(
+                uid = uid,
+                name = snapshot.getString("name").orEmpty(),
+                username = snapshot.getString("username").orEmpty(),
+                email = snapshot.getString("email").orEmpty(),
+                birthDateMillis = snapshot.getLong("birthDateMillis") ?: 0L,
+                nationality = snapshot.getString("nationality").orEmpty(),
+                createdAt = snapshot.getLong("createdAt") ?: 0L,
+                updatedAt = snapshot.getLong("updatedAt") ?: 0L
+            )
+            GetProfileResult.Success(profile)
+        }
+    } catch (exception: Exception) {
+        GetProfileResult.Error(exception.message ?: "Erro ao buscar perfil.")
     }
 
-    override suspend fun isUsernameAvailable(username: String, uid: String): Result<Boolean> = runCatching {
+    override suspend fun isUsernameAvailable(username: String, uid: String): UsernameAvailability = try {
         val snapshot = firestore.collection(COLLECTION_USERNAMES).document(username).get().await()
-        if (!snapshot.exists()) return@runCatching true
-        snapshot.getString("uid") == uid
+        if (!snapshot.exists() || snapshot.getString("uid") == uid) {
+            UsernameAvailability.Available
+        } else {
+            UsernameAvailability.Taken
+        }
+    } catch (exception: Exception) {
+        UsernameAvailability.Error(exception.message ?: "Erro ao verificar username.")
     }
 
     override suspend fun saveProfile(
