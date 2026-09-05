@@ -64,5 +64,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation("com.google.android.material:material:1.14.0")
     implementation(libs.firebase.auth)
+    implementation(libs.androidx.lifecycle.process)
 }
 
