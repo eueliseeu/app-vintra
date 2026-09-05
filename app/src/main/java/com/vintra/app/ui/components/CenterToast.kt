@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun CenterToast(
@@ -23,8 +25,11 @@ fun CenterToast(
     modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .padding(bottom = 24.dp),
+        contentAlignment = Alignment.BottomCenter
     ) {
         AnimatedVisibility(
             visible = message != null,
@@ -32,15 +37,16 @@ fun CenterToast(
             exit = fadeOut(animationSpec = tween(durationMillis = 300))
         ) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = Color(0xFF262626),
                 shadowElevation = 12.dp
             ) {
                 Text(
                     text = message.orEmpty(),
                     color = Color.White,
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 18.dp)
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                 )
             }
         }

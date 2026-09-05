@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 fun HomeScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
-            text = "Bem-vindo ao Vintra! (Home em construção)",
+            text = "Welcome to Vintra! (Home page under construction)",
             color = MaterialTheme.colorScheme.onBackground
         )
     }

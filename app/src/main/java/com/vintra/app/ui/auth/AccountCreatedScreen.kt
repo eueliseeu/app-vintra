@@ -57,7 +57,7 @@ fun AccountCreatedScreen(onContinue: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Conta criada com sucesso!",
+            text = "Account successfully created!",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -66,7 +66,7 @@ fun AccountCreatedScreen(onContinue: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Redirecionando...",
+            text = "Redirecting...",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
         )

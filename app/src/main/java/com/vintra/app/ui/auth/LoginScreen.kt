@@ -153,7 +153,7 @@ private fun LoginForm(
             if (uiState.isLoading) {
                 CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
             } else {
-                Text(text = "Acessar sua Conta", fontWeight = FontWeight.Bold)
+                Text(text = "Access Your Account", fontWeight = FontWeight.Bold)
             }
         }
 
@@ -190,7 +190,7 @@ private fun LoginForm(
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text(text = "Cadastre-se", fontWeight = FontWeight.Bold)
+            Text(text = "Sign up", fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -218,4 +218,4 @@ private fun loginFieldColors() = TextFieldDefaults.colors(
 )
 
 private fun buildVersionLabel(): String =
-    if (BuildConfig.DEBUG) "Version Vintra • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
+    if (BuildConfig.DEBUG) "Vintra version • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
