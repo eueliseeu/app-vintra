@@ -2,10 +2,7 @@ package com.vintra.app.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import com.vintra.app.domain.model.AuthResult
 import com.vintra.app.domain.repository.AuthRepository
 import com.vintra.app.domain.repository.DeviceRegistrationResult
 import com.vintra.app.domain.repository.DeviceRepository
@@ -49,22 +46,30 @@ class LoginViewModel @Inject constructor(
         val password = _uiState.value.password
 
         if (email.isEmpty() || password.isEmpty()) {
-            _uiState.update { it.copy(toastMessage = "Preencha e-mail e senha.") }
+            _uiState.update { it.copy(toastMessage = "Please fill in email and password.") }
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            authRepository.login(email, password)
-                .onSuccess {
+            when (val result = authRepository.login(email, password)) {
+                is AuthResult.Success -> {
                     _uiState.update { it.copy(isLoading = false, isLoginSuccessful = true) }
                 }
-                .onFailure { throwable ->
-                    _uiState.update {
-                        it.copy(isLoading = false, toastMessage = throwable.toFriendlyLoginMessage())
-                    }
+                is AuthResult.UserNotFound -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "User not found.") }
                 }
+                is AuthResult.InvalidCredentials -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email or password.") }
+                }
+                is AuthResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Error signing in. Please try again.") }
+                }
+            }
         }
     }
 
@@ -73,12 +78,12 @@ class LoginViewModel @Inject constructor(
         val password = _uiState.value.password
 
         if (email.isEmpty() || password.isEmpty()) {
-            _uiState.update { it.copy(toastMessage = "Preencha e-mail e senha.") }
+            _uiState.update { it.copy(toastMessage = "Please fill in email and password.") }
             return
         }
         if (password.length < MIN_PASSWORD_LENGTH) {
             _uiState.update {
-                it.copy(toastMessage = "A senha precisa ter pelo menos $MIN_PASSWORD_LENGTH caracteres.")
+                it.copy(toastMessage = "Password must be at least $MIN_PASSWORD_LENGTH characters long.")
             }
             return
         }
@@ -86,20 +91,39 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val newUser = authRepository.signUp(email, password).getOrElse { throwable ->
-                _uiState.update {
-                    it.copy(isLoading = false, toastMessage = throwable.toFriendlyRegisterMessage())
+            val newUser = when (val result = authRepository.signUp(email, password)) {
+                is AuthResult.Success -> result.user
+                is AuthResult.EmailAlreadyInUse -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Email already in use. Try logging in.") }
+                    return@launch
                 }
-                return@launch
+                is AuthResult.WeakPassword -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, toastMessage = "Password is too weak. Use at least $MIN_PASSWORD_LENGTH characters.")
+                    }
+                    return@launch
+                }
+                is AuthResult.InvalidCredentials -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email.") }
+                    return@launch
+                }
+                is AuthResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
+                    return@launch
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Error creating account. Please try again.") }
+                    return@launch
+                }
             }
 
-            when (val result = deviceRepository.registerDevice(newUser.uid)) {
+            when (deviceRepository.registerDevice(newUser.uid)) {
                 is DeviceRegistrationResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             step = LoginScreenStep.ACCOUNT_CREATED,
-                            toastMessage = "Conta criada com sucesso!"
+                            toastMessage = "Account created successfully!"
                         )
                     }
                 }
@@ -109,7 +133,7 @@ class LoginViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            toastMessage = "Este aparelho já possui uma conta cadastrada. Faça login."
+                            toastMessage = "This device already has an account registered. Please log in."
                         )
                     }
                 }
@@ -117,23 +141,10 @@ class LoginViewModel @Inject constructor(
                 is DeviceRegistrationResult.Error -> {
                     authRepository.deleteCurrentUser()
                     _uiState.update {
-                        it.copy(isLoading = false, toastMessage = "Erro ao registrar dispositivo. Tente novamente.")
+                        it.copy(isLoading = false, toastMessage = "Error registering device. Please try again.")
                     }
                 }
             }
         }
-    }
-
-    private fun Throwable.toFriendlyLoginMessage(): String = when (this) {
-        is FirebaseAuthInvalidUserException -> "Usuário não encontrado."
-        is FirebaseAuthInvalidCredentialsException -> "E-mail ou senha inválidos."
-        else -> message ?: "Erro ao entrar. Tente novamente."
-    }
-
-    private fun Throwable.toFriendlyRegisterMessage(): String = when (this) {
-        is FirebaseAuthUserCollisionException -> "E-mail já cadastrado. Tente fazer login."
-        is FirebaseAuthWeakPasswordException -> "Senha muito fraca. Use pelo menos $MIN_PASSWORD_LENGTH caracteres."
-        is FirebaseAuthInvalidCredentialsException -> "E-mail inválido."
-        else -> message ?: "Erro ao criar conta. Tente novamente."
     }
 }
