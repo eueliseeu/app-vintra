@@ -1,7 +1,9 @@
 package com.vintra.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.vintra.app.domain.model.UserProfile
+import com.vintra.app.data.mapper.toDomain
+import com.vintra.app.data.model.UserProfileDto
+import com.vintra.app.data.model.UsernameDto
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ProfileRepository
 import com.vintra.app.domain.repository.SaveProfileResult
@@ -22,17 +24,8 @@ class ProfileRepositoryImpl @Inject constructor(
         if (!snapshot.exists()) {
             GetProfileResult.Success(null)
         } else {
-            val profile = UserProfile(
-                uid = uid,
-                name = snapshot.getString("name").orEmpty(),
-                username = snapshot.getString("username").orEmpty(),
-                email = snapshot.getString("email").orEmpty(),
-                birthDateMillis = snapshot.getLong("birthDateMillis") ?: 0L,
-                nationality = snapshot.getString("nationality").orEmpty(),
-                createdAt = snapshot.getLong("createdAt") ?: 0L,
-                updatedAt = snapshot.getLong("updatedAt") ?: 0L
-            )
-            GetProfileResult.Success(profile)
+            val dto = snapshot.toObject(UserProfileDto::class.java)
+            GetProfileResult.Success(dto?.toDomain(uid))
         }
     } catch (exception: Exception) {
         GetProfileResult.Error(exception.message ?: "Erro ao buscar perfil.")
@@ -40,7 +33,8 @@ class ProfileRepositoryImpl @Inject constructor(
 
     override suspend fun isUsernameAvailable(username: String, uid: String): UsernameAvailability = try {
         val snapshot = firestore.collection(COLLECTION_USERNAMES).document(username).get().await()
-        if (!snapshot.exists() || snapshot.getString("uid") == uid) {
+        val dto = snapshot.toObject(UsernameDto::class.java)
+        if (!snapshot.exists() || dto?.uid == uid) {
             UsernameAvailability.Available
         } else {
             UsernameAvailability.Taken
@@ -67,32 +61,30 @@ class ProfileRepositoryImpl @Inject constructor(
         return try {
             firestore.runTransaction { transaction ->
                 val newUsernameSnapshot = transaction.get(newUsernameRef)
-                if (newUsernameSnapshot.exists() && newUsernameSnapshot.getString("uid") != uid) {
+                val existingUsernameOwner = newUsernameSnapshot.toObject(UsernameDto::class.java)?.uid
+                if (newUsernameSnapshot.exists() && existingUsernameOwner != uid) {
                     throw UsernameTakenException()
                 }
 
                 val existingUserSnapshot = transaction.get(usersRef)
-                val createdAt = if (existingUserSnapshot.exists()) {
-                    existingUserSnapshot.getLong("createdAt") ?: System.currentTimeMillis()
-                } else {
-                    System.currentTimeMillis()
-                }
+                val existingDto = existingUserSnapshot.toObject(UserProfileDto::class.java)
+                val createdAt = existingDto?.createdAt?.takeIf { it > 0 } ?: System.currentTimeMillis()
 
                 if (oldUsernameRef != null) {
                     transaction.delete(oldUsernameRef)
                 }
-                transaction.set(newUsernameRef, mapOf("uid" to uid))
+                transaction.set(newUsernameRef, UsernameDto(uid = uid))
 
-                val profileData = mapOf(
-                    "name" to name,
-                    "username" to username,
-                    "email" to email,
-                    "birthDateMillis" to birthDateMillis,
-                    "nationality" to nationality,
-                    "createdAt" to createdAt,
-                    "updatedAt" to System.currentTimeMillis()
+                val profileDto = UserProfileDto(
+                    name = name,
+                    username = username,
+                    email = email,
+                    birthDateMillis = birthDateMillis,
+                    nationality = nationality,
+                    createdAt = createdAt,
+                    updatedAt = System.currentTimeMillis()
                 )
-                transaction.set(usersRef, profileData)
+                transaction.set(usersRef, profileDto)
                 Unit
             }.await()
 

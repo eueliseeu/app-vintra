@@ -3,6 +3,7 @@ package com.vintra.app.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.vintra.app.core.device.DeviceIdProvider
+import com.vintra.app.data.model.DeviceDto
 import com.vintra.app.domain.repository.DeviceRegistrationResult
 import com.vintra.app.domain.repository.DeviceRepository
 import kotlinx.coroutines.tasks.await
@@ -17,12 +18,10 @@ class DeviceRepositoryImpl @Inject constructor(
 
     override suspend fun registerDevice(uid: String): DeviceRegistrationResult {
         val deviceId = deviceIdProvider.getDeviceId()
-        val data = mapOf(
-            "uid" to uid,
-            "createdAt" to System.currentTimeMillis()
-        )
+        val dto = DeviceDto(uid = uid, createdAt = System.currentTimeMillis())
+
         return try {
-            firestore.collection(COLLECTION_DEVICES).document(deviceId).set(data).await()
+            firestore.collection(COLLECTION_DEVICES).document(deviceId).set(dto).await()
             DeviceRegistrationResult.Success
         } catch (exception: FirebaseFirestoreException) {
             if (exception.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {

@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.model.ProfileEditability
 import com.vintra.app.domain.model.editability
-import com.vintra.app.domain.repository.AuthRepository
-import com.vintra.app.domain.repository.ProfileRepository
+import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.SaveProfileResult
+import com.vintra.app.domain.repository.UsernameAvailability
+import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
+import com.vintra.app.domain.usecase.profile.CheckUsernameAvailabilityUseCase
+import com.vintra.app.domain.usecase.profile.GetProfileUseCase
+import com.vintra.app.domain.usecase.profile.SaveProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,15 +28,17 @@ private const val DATE_PATTERN = "dd/MM/yyyy"
 
 @HiltViewModel
 class ProfileSetupViewModel @Inject constructor(
-    private val profileRepository: ProfileRepository,
-    private val authRepository: AuthRepository
+    private val getProfileUseCase: GetProfileUseCase,
+    private val saveProfileUseCase: SaveProfileUseCase,
+    private val checkUsernameAvailabilityUseCase: CheckUsernameAvailabilityUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileSetupUiState())
     val uiState: StateFlow<ProfileSetupUiState> = _uiState.asStateFlow()
 
     private val usernameInput = MutableStateFlow("")
-    private val uid: String? get() = authRepository.currentUser()?.uid
+    private val uid: String? get() = getCurrentUserUseCase()?.uid
 
     init {
         loadProfile()
@@ -42,24 +48,33 @@ class ProfileSetupViewModel @Inject constructor(
     private fun loadProfile() {
         viewModelScope.launch {
             val currentUid = uid ?: return@launch
-            val authEmail = authRepository.currentUser()?.email.orEmpty()
-            val profile = profileRepository.getProfile(currentUid).getOrNull()
+            val authEmail = getCurrentUserUseCase()?.email.orEmpty()
 
-            if (profile != null) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        name = profile.name,
-                        username = profile.username,
-                        email = profile.email.ifBlank { authEmail },
-                        birthDateText = profile.birthDateMillis.takeIf { ms -> ms > 0 }?.let(::formatDateText).orEmpty(),
-                        originalUsername = profile.username,
-                        editability = profile.editability(),
-                        usernameStatus = UsernameCheckStatus.AVAILABLE
-                    )
+            when (val result = getProfileUseCase(currentUid)) {
+                is GetProfileResult.Success -> {
+                    val profile = result.profile
+                    if (profile != null) {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                name = profile.name,
+                                username = profile.username,
+                                email = profile.email.ifBlank { authEmail },
+                                birthDateText = profile.birthDateMillis.takeIf { ms -> ms > 0 }?.let(::formatDateText).orEmpty(),
+                                originalUsername = profile.username,
+                                editability = profile.editability(),
+                                usernameStatus = UsernameCheckStatus.AVAILABLE
+                            )
+                        }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, email = authEmail) }
+                    }
                 }
-            } else {
-                _uiState.update { it.copy(isLoading = false, email = authEmail) }
+                is GetProfileResult.Error -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, email = authEmail, toastMessage = "Error loading profile. Please try again.")
+                    }
+                }
             }
         }
     }
@@ -113,15 +128,17 @@ class ProfileSetupViewModel @Inject constructor(
 
                     _uiState.update { it.copy(usernameStatus = UsernameCheckStatus.CHECKING) }
 
-                    profileRepository.isUsernameAvailable(username, currentUid)
-                        .onSuccess { available ->
-                            _uiState.update {
-                                it.copy(usernameStatus = if (available) UsernameCheckStatus.AVAILABLE else UsernameCheckStatus.TAKEN)
-                            }
+                    when (checkUsernameAvailabilityUseCase(username, currentUid)) {
+                        is UsernameAvailability.Available -> {
+                            _uiState.update { it.copy(usernameStatus = UsernameCheckStatus.AVAILABLE) }
                         }
-                        .onFailure {
+                        is UsernameAvailability.Taken -> {
+                            _uiState.update { it.copy(usernameStatus = UsernameCheckStatus.TAKEN) }
+                        }
+                        is UsernameAvailability.Error -> {
                             _uiState.update { it.copy(usernameStatus = UsernameCheckStatus.IDLE) }
                         }
+                    }
                 }
         }
     }
@@ -176,7 +193,7 @@ class ProfileSetupViewModel @Inject constructor(
             _uiState.update { it.copy(isSaving = true) }
 
             when (
-                val result = profileRepository.saveProfile(
+                val result = saveProfileUseCase(
                     uid = currentUid,
                     name = state.name.trim(),
                     username = state.username,
