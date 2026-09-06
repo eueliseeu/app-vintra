@@ -3,9 +3,9 @@ package com.vintra.app.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.model.AuthResult
-import com.vintra.app.domain.repository.AuthRepository
-import com.vintra.app.domain.repository.DeviceRegistrationResult
-import com.vintra.app.domain.repository.DeviceRepository
+import com.vintra.app.domain.usecase.auth.LoginUseCase
+import com.vintra.app.domain.usecase.auth.RegisterAccountResult
+import com.vintra.app.domain.usecase.auth.RegisterAccountUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +18,8 @@ private const val MIN_PASSWORD_LENGTH = 6
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val authRepository: AuthRepository,
-    private val deviceRepository: DeviceRepository
+    private val loginUseCase: LoginUseCase,
+    private val registerAccountUseCase: RegisterAccountUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -53,7 +53,7 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            when (val result = authRepository.login(email, password)) {
+            when (val result = loginUseCase(email, password)) {
                 is AuthResult.Success -> {
                     _uiState.update { it.copy(isLoading = false, isLoginSuccessful = true) }
                 }
@@ -91,34 +91,8 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val newUser = when (val result = authRepository.signUp(email, password)) {
-                is AuthResult.Success -> result.user
-                is AuthResult.EmailAlreadyInUse -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Email already in use. Try logging in.") }
-                    return@launch
-                }
-                is AuthResult.WeakPassword -> {
-                    _uiState.update {
-                        it.copy(isLoading = false, toastMessage = "Password is too weak. Use at least $MIN_PASSWORD_LENGTH characters.")
-                    }
-                    return@launch
-                }
-                is AuthResult.InvalidCredentials -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email.") }
-                    return@launch
-                }
-                is AuthResult.Error -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
-                    return@launch
-                }
-                else -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Error creating account. Please try again.") }
-                    return@launch
-                }
-            }
-
-            when (deviceRepository.registerDevice(newUser.uid)) {
-                is DeviceRegistrationResult.Success -> {
+            when (val result = registerAccountUseCase(email, password)) {
+                is RegisterAccountResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -127,9 +101,18 @@ class LoginViewModel @Inject constructor(
                         )
                     }
                 }
-
-                is DeviceRegistrationResult.AlreadyRegistered -> {
-                    authRepository.deleteCurrentUser()
+                is RegisterAccountResult.EmailAlreadyInUse -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Email already in use. Try logging in.") }
+                }
+                is RegisterAccountResult.WeakPassword -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, toastMessage = "Password is too weak. Use at least $MIN_PASSWORD_LENGTH characters.")
+                    }
+                }
+                is RegisterAccountResult.InvalidEmail -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email.") }
+                }
+                is RegisterAccountResult.DeviceAlreadyRegistered -> {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -137,12 +120,8 @@ class LoginViewModel @Inject constructor(
                         )
                     }
                 }
-
-                is DeviceRegistrationResult.Error -> {
-                    authRepository.deleteCurrentUser()
-                    _uiState.update {
-                        it.copy(isLoading = false, toastMessage = "Error registering device. Please try again.")
-                    }
+                is RegisterAccountResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
                 }
             }
         }

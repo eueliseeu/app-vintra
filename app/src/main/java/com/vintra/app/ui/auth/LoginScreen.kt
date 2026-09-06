@@ -195,12 +195,12 @@ private fun LoginForm(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Text(
-            text = buildVersionLabel(),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+//        Text(
+//            text = buildVersionLabel(),
+//            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+//            fontSize = 12.sp,
+//            modifier = Modifier.padding(bottom = 24.dp)
+//        )
     }
 }
 
@@ -217,5 +217,5 @@ private fun loginFieldColors() = TextFieldDefaults.colors(
     unfocusedPlaceholderColor = Color.Gray
 )
 
-private fun buildVersionLabel(): String =
-    if (BuildConfig.DEBUG) "Vintra version • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
+//private fun buildVersionLabel(): String =
+//    if (BuildConfig.DEBUG) "Vintra version • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"
