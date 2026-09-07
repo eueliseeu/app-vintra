@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(isAuthenticated) {
                         if (!isAuthenticated) {
                             navController.navigate(LoginRoute) {
-                                popUpTo<SessionRouterRoute> { inclusive = true }
+                                popUpTo(navController.graph.id) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
