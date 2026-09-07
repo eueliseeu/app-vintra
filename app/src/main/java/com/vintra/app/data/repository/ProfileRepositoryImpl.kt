@@ -2,8 +2,9 @@ package com.vintra.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.vintra.app.data.mapper.toDomain
-import com.vintra.app.data.model.UserProfileDto
+import com.vintra.app.data.mapper.toDto
 import com.vintra.app.data.model.UsernameDto
+import com.vintra.app.domain.model.UserProfile
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ProfileRepository
 import com.vintra.app.domain.repository.SaveProfileResult
@@ -24,7 +25,7 @@ class ProfileRepositoryImpl @Inject constructor(
         if (!snapshot.exists()) {
             GetProfileResult.Success(null)
         } else {
-            val dto = snapshot.toObject(UserProfileDto::class.java)
+            val dto = snapshot.toObject(com.vintra.app.data.model.UserProfileDto::class.java)
             GetProfileResult.Success(dto?.toDomain(uid))
         }
     } catch (exception: Exception) {
@@ -67,7 +68,7 @@ class ProfileRepositoryImpl @Inject constructor(
                 }
 
                 val existingUserSnapshot = transaction.get(usersRef)
-                val existingDto = existingUserSnapshot.toObject(UserProfileDto::class.java)
+                val existingDto = existingUserSnapshot.toObject(com.vintra.app.data.model.UserProfileDto::class.java)
                 val createdAt = existingDto?.createdAt?.takeIf { it > 0 } ?: System.currentTimeMillis()
 
                 if (oldUsernameRef != null) {
@@ -75,7 +76,8 @@ class ProfileRepositoryImpl @Inject constructor(
                 }
                 transaction.set(newUsernameRef, UsernameDto(uid = uid))
 
-                val profileDto = UserProfileDto(
+                val profile = UserProfile(
+                    uid = uid,
                     name = name,
                     username = username,
                     email = email,
@@ -84,7 +86,7 @@ class ProfileRepositoryImpl @Inject constructor(
                     createdAt = createdAt,
                     updatedAt = System.currentTimeMillis()
                 )
-                transaction.set(usersRef, profileDto)
+                transaction.set(usersRef, profile.toDto())
                 Unit
             }.await()
 

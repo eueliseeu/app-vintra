@@ -8,6 +8,9 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.vintra.app.domain.model.AuthResult
 import com.vintra.app.domain.model.AuthUser
 import com.vintra.app.domain.repository.AuthRepository
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -48,4 +51,16 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun currentUser(): AuthUser? =
         firebaseAuth.currentUser?.let { AuthUser(uid = it.uid, email = it.email) }
+
+    override fun observeAuthState(): Flow<Boolean> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser != null)
+        }
+        firebaseAuth.addAuthStateListener(listener)
+        awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+    }
+
+    override fun signOut() {
+        firebaseAuth.signOut()
+    }
 }

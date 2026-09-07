@@ -13,3 +13,13 @@ fun UserProfileDto.toDomain(uid: String): UserProfile = UserProfile(
     createdAt = createdAt,
     updatedAt = updatedAt
 )
+
+fun UserProfile.toDto(): UserProfileDto = UserProfileDto(
+    name = name,
+    username = username,
+    email = email,
+    birthDateMillis = birthDateMillis,
+    nationality = nationality,
+    createdAt = createdAt,
+    updatedAt = updatedAt
+)
