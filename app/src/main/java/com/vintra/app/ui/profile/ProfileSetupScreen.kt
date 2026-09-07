@@ -1,5 +1,8 @@
 package com.vintra.app.ui.profile
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,11 +45,13 @@ import com.vintra.app.R
 import com.vintra.app.core.util.formatDate
 import com.vintra.app.domain.model.ProfileEditability
 import com.vintra.app.ui.components.CenterToast
+import com.vintra.app.ui.components.ProfileAvatar
 import com.vintra.app.ui.components.appTextFieldColors
 import kotlinx.coroutines.delay
 
 private const val TOAST_DURATION_MS = 2500L
 private val EXTRA_TOP_SPACING = 40.dp
+private val AVATAR_SIZE = 88.dp
 
 @Composable
 fun ProfileSetupScreen(
@@ -81,6 +86,10 @@ fun ProfileSetupScreen(
 
     val isLocked = uiState.editability is ProfileEditability.Locked
 
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri -> uri?.let(viewModel::onPhotoPicked) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -109,7 +118,20 @@ fun ProfileSetupScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            ProfileAvatar(
+                base64 = uiState.photoBase64,
+                isUploading = uiState.isUploadingPhoto,
+                size = AVATAR_SIZE,
+                onClick = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 text = "Your information",

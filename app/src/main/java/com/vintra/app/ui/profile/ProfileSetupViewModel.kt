@@ -1,16 +1,21 @@
 package com.vintra.app.ui.profile
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.model.ProfileEditability
 import com.vintra.app.domain.model.editability
+import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.SaveProfileResult
 import com.vintra.app.domain.repository.UsernameAvailability
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.profile.CheckUsernameAvailabilityUseCase
+import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
 import com.vintra.app.domain.usecase.profile.GetProfileUseCase
 import com.vintra.app.domain.usecase.profile.SaveProfileUseCase
+import com.vintra.app.domain.usecase.profile.UploadPhotoResult
+import com.vintra.app.domain.usecase.profile.UploadProfilePhotoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +36,9 @@ class ProfileSetupViewModel @Inject constructor(
     private val getProfileUseCase: GetProfileUseCase,
     private val saveProfileUseCase: SaveProfileUseCase,
     private val checkUsernameAvailabilityUseCase: CheckUsernameAvailabilityUseCase,
-    private val getCurrentUserUseCase: GetCurrentUserUseCase
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
+    private val uploadProfilePhotoUseCase: UploadProfilePhotoUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileSetupUiState())
@@ -73,6 +80,33 @@ class ProfileSetupViewModel @Inject constructor(
                 is GetProfileResult.Error -> {
                     _uiState.update {
                         it.copy(isLoading = false, email = authEmail, toastMessage = "Error loading profile. Please try again.")
+                    }
+                }
+            }
+
+            loadPhoto(currentUid)
+        }
+    }
+
+    private suspend fun loadPhoto(currentUid: String) {
+        when (val result = getProfilePhotoUseCase(currentUid)) {
+            is GetPhotoResult.Success -> _uiState.update { it.copy(photoBase64 = result.base64) }
+            is GetPhotoResult.Error -> Unit // Foto é opcional; falha ao carregar não bloqueia a tela.
+        }
+    }
+
+    fun onPhotoPicked(uri: Uri) {
+        val currentUid = uid ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUploadingPhoto = true) }
+            when (val result = uploadProfilePhotoUseCase(currentUid, uri)) {
+                is UploadPhotoResult.Success -> {
+                    loadPhoto(currentUid)
+                    _uiState.update { it.copy(isUploadingPhoto = false) }
+                }
+                is UploadPhotoResult.Error -> {
+                    _uiState.update {
+                        it.copy(isUploadingPhoto = false, toastMessage = "Error updating photo. Please try again.")
                     }
                 }
             }

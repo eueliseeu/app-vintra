@@ -2,8 +2,10 @@ package com.vintra.app.domain.usecase.auth
 
 import com.vintra.app.domain.model.AuthResult
 import com.vintra.app.domain.repository.AuthRepository
+import com.vintra.app.domain.repository.BalanceRepository
 import com.vintra.app.domain.repository.DeviceRegistrationResult
 import com.vintra.app.domain.repository.DeviceRepository
+import com.vintra.app.domain.repository.InitBalanceResult
 import javax.inject.Inject
 
 sealed interface RegisterAccountResult {
@@ -17,7 +19,8 @@ sealed interface RegisterAccountResult {
 
 class RegisterAccountUseCase @Inject constructor(
     private val authRepository: AuthRepository,
-    private val deviceRepository: DeviceRepository
+    private val deviceRepository: DeviceRepository,
+    private val balanceRepository: BalanceRepository
 ) {
     suspend operator fun invoke(email: String, password: String): RegisterAccountResult {
         val authResult = authRepository.signUp(email, password)
@@ -31,15 +34,23 @@ class RegisterAccountUseCase @Inject constructor(
             else -> return RegisterAccountResult.Error("Erro ao criar conta. Tente novamente.")
         }
 
-        return when (val deviceResult = deviceRepository.registerDevice(newUser.uid)) {
-            is DeviceRegistrationResult.Success -> RegisterAccountResult.Success
+        when (val deviceResult = deviceRepository.registerDevice(newUser.uid)) {
+            is DeviceRegistrationResult.Success -> Unit
             is DeviceRegistrationResult.AlreadyRegistered -> {
                 authRepository.deleteCurrentUser()
-                RegisterAccountResult.DeviceAlreadyRegistered
+                return RegisterAccountResult.DeviceAlreadyRegistered
             }
             is DeviceRegistrationResult.Error -> {
                 authRepository.deleteCurrentUser()
-                RegisterAccountResult.Error(deviceResult.message)
+                return RegisterAccountResult.Error(deviceResult.message)
+            }
+        }
+
+        return when (val balanceResult = balanceRepository.initBalance(newUser.uid)) {
+            is InitBalanceResult.Success -> RegisterAccountResult.Success
+            is InitBalanceResult.Error -> {
+                authRepository.deleteCurrentUser()
+                RegisterAccountResult.Error(balanceResult.message)
             }
         }
     }
