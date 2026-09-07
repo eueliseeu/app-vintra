@@ -20,5 +20,7 @@ data class ProfileSetupUiState(
     val originalUsername: String? = null,
     val editability: ProfileEditability = ProfileEditability.Editable,
     val toastMessage: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val photoBase64: String? = null,
+    val isUploadingPhoto: Boolean = false
 )
