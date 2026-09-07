@@ -3,6 +3,7 @@ package com.vintra.app.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.vintra.app.data.mapper.toDomain
 import com.vintra.app.data.mapper.toDto
+import com.vintra.app.data.model.UserProfileDto
 import com.vintra.app.data.model.UsernameDto
 import com.vintra.app.domain.model.UserProfile
 import com.vintra.app.domain.repository.GetProfileResult
@@ -25,7 +26,7 @@ class ProfileRepositoryImpl @Inject constructor(
         if (!snapshot.exists()) {
             GetProfileResult.Success(null)
         } else {
-            val dto = snapshot.toObject(com.vintra.app.data.model.UserProfileDto::class.java)
+            val dto = snapshot.toObject(UserProfileDto::class.java)
             GetProfileResult.Success(dto?.toDomain(uid))
         }
     } catch (exception: Exception) {
@@ -54,6 +55,11 @@ class ProfileRepositoryImpl @Inject constructor(
         previousUsername: String?
     ): SaveProfileResult {
         val usersRef = firestore.collection(COLLECTION_USERS).document(uid)
+
+        val isNewUsername = previousUsername == null
+        val usernameChanged = previousUsername != null && previousUsername != username
+        val shouldWriteUsername = isNewUsername || usernameChanged
+
         val newUsernameRef = firestore.collection(COLLECTION_USERNAMES).document(username)
         val oldUsernameRef = previousUsername
             ?.takeIf { it != username }
@@ -61,20 +67,22 @@ class ProfileRepositoryImpl @Inject constructor(
 
         return try {
             firestore.runTransaction { transaction ->
-                val newUsernameSnapshot = transaction.get(newUsernameRef)
-                val existingUsernameOwner = newUsernameSnapshot.toObject(UsernameDto::class.java)?.uid
-                if (newUsernameSnapshot.exists() && existingUsernameOwner != uid) {
-                    throw UsernameTakenException()
+                if (shouldWriteUsername) {
+                    val newUsernameSnapshot = transaction.get(newUsernameRef)
+                    val existingUsernameOwner = newUsernameSnapshot.toObject(UsernameDto::class.java)?.uid
+                    if (newUsernameSnapshot.exists() && existingUsernameOwner != uid) {
+                        throw UsernameTakenException()
+                    }
                 }
 
                 val existingUserSnapshot = transaction.get(usersRef)
-                val existingDto = existingUserSnapshot.toObject(com.vintra.app.data.model.UserProfileDto::class.java)
+                val existingDto = existingUserSnapshot.toObject(UserProfileDto::class.java)
                 val createdAt = existingDto?.createdAt?.takeIf { it > 0 } ?: System.currentTimeMillis()
 
-                if (oldUsernameRef != null) {
-                    transaction.delete(oldUsernameRef)
+                if (shouldWriteUsername) {
+                    oldUsernameRef?.let { transaction.delete(it) }
+                    transaction.set(newUsernameRef, UsernameDto(uid = uid))
                 }
-                transaction.set(newUsernameRef, UsernameDto(uid = uid))
 
                 val profile = UserProfile(
                     uid = uid,
