@@ -5,15 +5,27 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.vintra.app.ui.components.AuthenticatedScaffold
+import com.vintra.app.ui.navigation.BottomTab
 
 @Composable
 fun HomeScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = "Welcome to Vintra! (Home page under construction)",
-            color = MaterialTheme.colorScheme.onBackground
-        )
+    var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
+
+    AuthenticatedScaffold(
+        selectedTab = selectedTab,
+        onTabSelected = { tab ->
+            if (tab == BottomTab.HOME) {
+                selectedTab = tab
+            }
+        }
+    ) {
+
     }
 }
