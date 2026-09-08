@@ -159,41 +159,41 @@ private fun LoginForm(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            HorizontalDivider(
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
-            )
-            Text(
-                text = "ou",
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-            HorizontalDivider(
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
-            )
-        }
+//        Row(
+//            verticalAlignment = Alignment.CenterVertically,
+//            modifier = Modifier.fillMaxWidth()
+//        ) {
+//            HorizontalDivider(
+//                modifier = Modifier.weight(1f),
+//                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+//            )
+//            Text(
+//                text = "ou",
+//                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+//                modifier = Modifier.padding(horizontal = 12.dp)
+//            )
+//            HorizontalDivider(
+//                modifier = Modifier.weight(1f),
+//                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+//            )
+//        }
 
-        Spacer(modifier = Modifier.height(20.dp))
+//        Spacer(modifier = Modifier.height(20.dp))
 
-        OutlinedButton(
-            onClick = viewModel::register,
-            enabled = !uiState.isLoading,
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-        ) {
-            Text(text = "Sign up", fontWeight = FontWeight.Bold)
-        }
+//        OutlinedButton(
+//            onClick = viewModel::register,
+//            enabled = !uiState.isLoading,
+//            shape = RoundedCornerShape(10.dp),
+//            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)),
+//            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(52.dp)
+//        ) {
+//            Text(text = "Sign up", fontWeight = FontWeight.Bold)
+//        }
 
-        Spacer(modifier = Modifier.weight(1f))
+//        Spacer(modifier = Modifier.weight(1f))
 
 //        Text(
 //            text = buildVersionLabel(),
