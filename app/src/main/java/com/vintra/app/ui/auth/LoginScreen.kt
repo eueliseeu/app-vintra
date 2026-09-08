@@ -178,7 +178,7 @@ private fun LoginForm(
 //            )
 //        }
 
-//        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
 //        OutlinedButton(
 //            onClick = viewModel::register,
@@ -193,7 +193,7 @@ private fun LoginForm(
 //            Text(text = "Sign up", fontWeight = FontWeight.Bold)
 //        }
 
-//        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.weight(1f))
 
 //        Text(
 //            text = buildVersionLabel(),
