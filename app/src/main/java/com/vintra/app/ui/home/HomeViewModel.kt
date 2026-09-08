@@ -5,12 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.repository.GetBalanceResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
-import com.vintra.app.domain.usecase.balance.GetBalanceUseCase
+import com.vintra.app.domain.usecase.balance.ObserveBalanceUseCase
 import com.vintra.app.domain.usecase.profile.GetProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,17 +20,18 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getProfileUseCase: GetProfileUseCase,
-    private val getBalanceUseCase: GetBalanceUseCase
+    private val observeBalanceUseCase: ObserveBalanceUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        loadHome()
+        loadProfile()
+        observeBalance()
     }
 
-    private fun loadHome() {
+    private fun loadProfile() {
         val uid = getCurrentUserUseCase()?.uid ?: return
 
         viewModelScope.launch {
@@ -41,13 +43,20 @@ class HomeViewModel @Inject constructor(
                 is GetProfileResult.Error -> ""
             }
 
-            val amountCents = when (val balanceResult = getBalanceUseCase(uid)) {
-                is GetBalanceResult.Success -> balanceResult.amountCents
-                is GetBalanceResult.Error -> 0L
-            }
+            _uiState.update { it.copy(firstName = firstName) }
+        }
+    }
 
-            _uiState.update {
-                it.copy(isLoading = false, firstName = firstName, amountCents = amountCents)
+    private fun observeBalance() {
+        val uid = getCurrentUserUseCase()?.uid ?: return
+
+        viewModelScope.launch {
+            observeBalanceUseCase(uid).collectLatest { result ->
+                val amountCents = when (result) {
+                    is GetBalanceResult.Success -> result.amountCents
+                    is GetBalanceResult.Error -> 0L
+                }
+                _uiState.update { it.copy(isLoading = false, amountCents = amountCents) }
             }
         }
     }

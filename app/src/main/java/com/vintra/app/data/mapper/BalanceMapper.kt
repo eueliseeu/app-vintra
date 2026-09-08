@@ -1,7 +1,7 @@
 package com.vintra.app.data.mapper
 
 import com.vintra.app.domain.model.Balance
-import com.vintra.app.domain.model.BalanceDto
+import com.vintra.app.data.model.BalanceDto
 
 fun BalanceDto.toDomain(uid: String): Balance = Balance(
     uid = uid,

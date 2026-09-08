@@ -2,10 +2,11 @@ package com.vintra.app.domain.usecase.balance
 
 import com.vintra.app.domain.repository.BalanceRepository
 import com.vintra.app.domain.repository.GetBalanceResult
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
-class GetBalanceUseCase @Inject constructor(
+class ObserveBalanceUseCase @Inject constructor(
     private val balanceRepository: BalanceRepository
 ) {
-    suspend operator fun invoke(uid: String): GetBalanceResult = balanceRepository.getBalance(uid)
+    operator fun invoke(uid: String): Flow<GetBalanceResult> = balanceRepository.observeBalance(uid)
 }
