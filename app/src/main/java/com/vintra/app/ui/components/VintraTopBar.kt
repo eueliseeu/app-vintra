@@ -11,16 +11,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vintra.app.R
-
-private val TOP_BAR_LOGO_SIZE = 50.dp
-private val TOP_BAR_AVATAR_SIZE = 50.dp
+import com.vintra.app.ui.theme.titleColor
 
 @Composable
 fun VintraTopBar(
@@ -30,31 +32,45 @@ fun VintraTopBar(
     modifier: Modifier = Modifier
 ) {
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> uri?.let(onPhotoPicked) }
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let(onPhotoPicked)
+    }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .padding(
+                top = 50.dp,
+                bottom = 20.dp
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Image(
-            painter = painterResource(id = R.drawable.vintra),
-            contentDescription = "Vintra logo",
+            painter = painterResource(R.drawable.vintra),
+            contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(TOP_BAR_LOGO_SIZE)
+            modifier = Modifier.size(50.dp)
+        )
+
+        Text(
+            text = "Global",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = titleColor
         )
 
         ProfileAvatar(
             base64 = photoBase64,
             isUploading = isUploadingPhoto,
-            size = TOP_BAR_AVATAR_SIZE,
+            size = 45.dp,
             onClick = {
                 photoPickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    PickVisualMediaRequest(
+                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                    )
                 )
             }
         )

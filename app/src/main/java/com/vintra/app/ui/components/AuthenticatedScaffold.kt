@@ -32,24 +32,45 @@ fun AuthenticatedScaffold(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
-                VintraTopBar(
-                    photoBase64 = topBarState.photoBase64,
-                    isUploadingPhoto = topBarState.isUploadingPhoto,
-                    onPhotoPicked = topBarViewModel::onPhotoPicked
-                )
+                VintraLayoutContainer {
+                    VintraTopBar(
+                        photoBase64 = topBarState.photoBase64,
+                        isUploadingPhoto = topBarState.isUploadingPhoto,
+                        onPhotoPicked = topBarViewModel::onPhotoPicked
+                    )
+                }
             },
-            bottomBar = { VintraBottomBar(selectedTab = selectedTab, onTabSelected = onTabSelected) }
+            bottomBar = {
+                VintraBottomBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { tab ->
+                        if (tab == BottomTab.HOME) {
+                            onTabSelected(tab)
+                        }
+                    }
+                )
+            }
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                content()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                VintraLayoutContainer {
+                    content()
+                }
             }
         }
 
-        CenterToast(message = topBarState.toastMessage)
+        CenterToast(
+            message = topBarState.toastMessage
+        )
     }
 }
