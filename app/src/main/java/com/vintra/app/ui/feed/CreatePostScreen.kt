@@ -72,6 +72,8 @@ fun CreatePostScreen(
             VintraTopBar(
                 photoBase64 = topBarState.photoBase64,
                 isUploadingPhoto = topBarState.isUploadingPhoto,
+                username = topBarState.username,
+                isVerified = topBarState.isVerified,
                 onPhotoPicked = topBarViewModel::onPhotoPicked,
                 onProfileClick = onProfileClick,
                 onLogout = {

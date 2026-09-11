@@ -8,13 +8,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +42,8 @@ private val TOP_BAR_AVATAR_SIZE = 40.dp
 fun VintraTopBar(
     photoBase64: String?,
     isUploadingPhoto: Boolean,
+    username: String,
+    isVerified: Boolean,
     onPhotoPicked: (Uri) -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
@@ -54,8 +59,8 @@ fun VintraTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            // TODO: Ajuste o top para
-            .padding(start = 20.dp, end = 20.dp, top = 35.dp, bottom = 12.dp),
+            // Ajuste o top para subir/descer o TopBar (ex: 16.dp, 24.dp, 32.dp)
+            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -85,6 +90,31 @@ fun VintraTopBar(
                 shape = RoundedCornerShape(16.dp),
                 containerColor = Color(0xFF131313)
             ) {
+                if (username.isNotBlank()) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "@$username",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                                if (isVerified) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    VerifiedBadge(size = 16.dp)
+                                }
+                            }
+                        },
+                        onClick = {},
+                        enabled = false
+                    )
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.12f),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+
                 DropdownMenuItem(
                     text = { Text("Profile", color = Color.White) },
                     onClick = {

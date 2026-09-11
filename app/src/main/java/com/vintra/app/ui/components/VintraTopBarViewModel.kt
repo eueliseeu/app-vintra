@@ -4,9 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.repository.GetPhotoResult
+import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.auth.SignOutUseCase
 import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
+import com.vintra.app.domain.usecase.profile.GetProfileUseCase
 import com.vintra.app.domain.usecase.profile.UploadPhotoResult
 import com.vintra.app.domain.usecase.profile.UploadProfilePhotoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,12 +22,15 @@ import javax.inject.Inject
 data class VintraTopBarUiState(
     val photoBase64: String? = null,
     val isUploadingPhoto: Boolean = false,
+    val username: String = "",
+    val isVerified: Boolean = false,
     val toastMessage: String? = null
 )
 
 @HiltViewModel
 class VintraTopBarViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val getProfileUseCase: GetProfileUseCase,
     private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
     private val uploadProfilePhotoUseCase: UploadProfilePhotoUseCase,
     private val signOutUseCase: SignOutUseCase
@@ -35,7 +40,26 @@ class VintraTopBarViewModel @Inject constructor(
     val uiState: StateFlow<VintraTopBarUiState> = _uiState.asStateFlow()
 
     init {
+        loadProfile()
         loadPhoto()
+    }
+
+    private fun loadProfile() {
+        val uid = getCurrentUserUseCase()?.uid ?: return
+        viewModelScope.launch {
+            when (val result = getProfileUseCase(uid)) {
+                is GetProfileResult.Success -> {
+                    val profile = result.profile
+                    _uiState.update {
+                        it.copy(
+                            username = profile?.username.orEmpty(),
+                            isVerified = profile?.isVerified == true
+                        )
+                    }
+                }
+                is GetProfileResult.Error -> Unit
+            }
+        }
     }
 
     private fun loadPhoto() {
@@ -59,7 +83,10 @@ class VintraTopBarViewModel @Inject constructor(
                 }
                 is UploadPhotoResult.Error -> {
                     _uiState.update {
-                        it.copy(isUploadingPhoto = false, toastMessage = "Error updating photo. Please try again.")
+                        it.copy(
+                            isUploadingPhoto = false,
+                            toastMessage = "Error updating photo. Please try again."
+                        )
                     }
                 }
             }
