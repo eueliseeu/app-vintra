@@ -20,8 +20,10 @@ import com.vintra.app.ui.auth.LoginScreen
 import com.vintra.app.ui.feed.CreatePostScreen
 import com.vintra.app.ui.feed.PostDetailScreen
 import com.vintra.app.ui.home.HomeScreen
+import com.vintra.app.ui.navigation.CreateJobRoute
 import com.vintra.app.ui.navigation.CreatePostRoute
 import com.vintra.app.ui.navigation.HomeRoute
+import com.vintra.app.ui.navigation.JobsRoute
 import com.vintra.app.ui.navigation.LoginRoute
 import com.vintra.app.ui.navigation.PostDetailRoute
 import com.vintra.app.ui.navigation.ProfileSetupRoute
@@ -108,15 +110,14 @@ class MainActivity : ComponentActivity() {
                     composable<HomeRoute> {
                         HomeScreen(
                             onCreatePost = { navController.navigate(CreatePostRoute) },
+                            onCreateJob = { navController.navigate(CreateJobRoute) },
                             onProfileClick = { navController.navigate(ProfileSetupRoute) },
-                            onLogout = {
-                                navController.navigate(SessionRouterRoute) {
-                                    popUpTo<HomeRoute> { inclusive = true }
+                            onLogout = { /* ... */ },
+                            onPostClick = { postId -> navController.navigate(PostDetailRoute(postId)) },
+                            onNavigateToJobs = {
+                                navController.navigate(JobsRoute) {
                                     launchSingleTop = true
                                 }
-                            },
-                            onPostClick = { postId ->
-                                navController.navigate(PostDetailRoute(postId))
                             }
                         )
                     }

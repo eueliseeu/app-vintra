@@ -15,7 +15,16 @@ data object ProfileSetupRoute
 data object HomeRoute
 
 @Serializable
+data object JobsRoute
+
+@Serializable
 data class PostDetailRoute(val postId: String)
 
 @Serializable
+data class JobDetailRoute(val jobId: String)
+
+@Serializable
 data object CreatePostRoute
+
+@Serializable
+data object CreateJobRoute
