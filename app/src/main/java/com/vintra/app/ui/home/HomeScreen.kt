@@ -1,13 +1,21 @@
+// app/src/main/java/com/vintra/app/ui/home/HomeScreen.kt
 package com.vintra.app.ui.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,54 +27,104 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vintra.app.core.util.greetingForHour
 import com.vintra.app.ui.components.AuthenticatedScaffold
+import com.vintra.app.ui.components.CenterToast
 import com.vintra.app.ui.components.HomeGreetingHeader
+import com.vintra.app.ui.feed.FeedViewModel
+import com.vintra.app.ui.feed.components.PostCard
+import com.vintra.app.ui.home.components.EventBannerCarousel
 import com.vintra.app.ui.navigation.BottomTab
+import kotlinx.coroutines.delay
 import java.util.Calendar
 
+private const val TOAST_DURATION_MS = 2500L
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = hiltViewModel()
+    onCreatePost: () -> Unit,
+    onProfileClick: () -> Unit,
+    onLogout: () -> Unit,
+    onPostClick: (String) -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+    feedViewModel: FeedViewModel = hiltViewModel()
 ) {
-    var selectedTab by remember {
-        mutableStateOf(BottomTab.HOME)
-    }
-
+    var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
     val uiState by viewModel.uiState.collectAsState()
+    val feedState by feedViewModel.uiState.collectAsState()
+    val greeting = remember { greetingForHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
 
-    val greeting = remember {
-        greetingForHour(
-            Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        )
+    LaunchedEffect(feedState.toastMessage) {
+        if (feedState.toastMessage != null) {
+            delay(TOAST_DURATION_MS)
+            feedViewModel.clearToast()
+        }
     }
 
     AuthenticatedScaffold(
         selectedTab = selectedTab,
-        onTabSelected = { tab ->
-            selectedTab = tab
-        }
+        onTabSelected = { selectedTab = it },
+        onCreatePost = onCreatePost,
+        onProfileClick = onProfileClick,
+        onLogout = onLogout
     ) {
-        if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(
-                        top = 12.dp,
-                        start = 20.dp,
-                        end = 20.dp
-                    ),
-                horizontalAlignment = Alignment.Start
-            ) {
-                HomeGreetingHeader(
-                    greeting = greeting,
-                    firstName = uiState.firstName,
-                    amountCents = uiState.amountCents
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.Center)
                 )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Cabeçalho fixo: fica grudado no topo enquanto os posts rolam por baixo.
+                    stickyHeader {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.background)
+                        ) {
+                            HomeGreetingHeader(
+                                greeting = greeting,
+                                firstName = uiState.firstName,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 32.dp, bottom = 12.dp)
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                EventBannerCarousel()
+                            }
+                        }
+                    }
+
+                    if (feedState.isLoadingFeed) {
+                        item { CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp)) }
+                    } else {
+                        items(
+                            items = feedState.posts,
+                            key = { it.id }
+                        ) { post ->
+                            PostCard(
+                                post = post,
+                                onClick = { onPostClick(post.id) }
+                            )
+                        }
+                    }
+                }
             }
+            CenterToast(message = feedState.toastMessage)
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.vintra.app.domain.usecase.profile
 
+import com.vintra.app.domain.model.AuthProvider
 import com.vintra.app.domain.repository.ProfileRepository
 import com.vintra.app.domain.repository.SaveProfileResult
 import javax.inject.Inject
@@ -14,6 +15,7 @@ class SaveProfileUseCase @Inject constructor(
         email: String,
         birthDateMillis: Long,
         nationality: String,
+        provider: AuthProvider,
         previousUsername: String?
     ): SaveProfileResult = profileRepository.saveProfile(
         uid = uid,
@@ -22,6 +24,7 @@ class SaveProfileUseCase @Inject constructor(
         email = email,
         birthDateMillis = birthDateMillis,
         nationality = nationality,
+        provider = provider,
         previousUsername = previousUsername
     )
 }

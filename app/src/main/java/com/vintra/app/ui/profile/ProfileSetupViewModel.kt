@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import javax.inject.Inject
+import com.vintra.app.domain.model.AuthProvider
 
 private const val DATE_PATTERN = "dd/MM/yyyy"
 
@@ -234,6 +235,7 @@ class ProfileSetupViewModel @Inject constructor(
                     email = state.email,
                     birthDateMillis = birthDateMillis,
                     nationality = FIXED_NATIONALITY,
+                    provider = getCurrentUserUseCase()?.provider ?: AuthProvider.UNKNOWN,
                     previousUsername = state.originalUsername
                 )
             ) {
