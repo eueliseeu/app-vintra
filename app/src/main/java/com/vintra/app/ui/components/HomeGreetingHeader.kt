@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,13 +23,10 @@ fun HomeGreetingHeader(
             text = "$greeting, $firstName",
             color = Color.Gray,
             fontSize = 13.sp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 16.dp, top = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
-
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }
