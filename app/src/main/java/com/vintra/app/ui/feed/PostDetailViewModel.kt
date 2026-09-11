@@ -26,8 +26,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 
 private const val COMMENT_MAX_LENGTH = 500
+private const val TEMP_MATCH_WINDOW_MS = 60_000L
 
 @HiltViewModel
 class PostDetailViewModel @Inject constructor(
@@ -151,6 +153,9 @@ class PostDetailViewModel @Inject constructor(
                 )
             ) {
                 is CreateCommentResult.Success -> {
+                    _uiState.update { state ->
+                        state.copy(comments = state.comments.filterNot { it.id == tempId })
+                    }
                 }
                 is CreateCommentResult.Error -> {
                     _uiState.update {
@@ -183,9 +188,13 @@ class PostDetailViewModel @Inject constructor(
                 when (result) {
                     is ObserveCommentsResult.Success -> {
                         _uiState.update { current ->
-                            val serverIds = result.comments.map { it.id }.toSet()
-                            val pendingTemps = current.comments.filter {
-                                it.id.startsWith("temp_") && it.id !in serverIds
+                            val pendingTemps = current.comments.filter { temp ->
+                                temp.id.startsWith("temp_") &&
+                                        result.comments.none { server ->
+                                            server.authorUid == temp.authorUid &&
+                                                    server.text == temp.text &&
+                                                    abs(server.createdAt - temp.createdAt) < TEMP_MATCH_WINDOW_MS
+                                        }
                             }
 
                             current.copy(
