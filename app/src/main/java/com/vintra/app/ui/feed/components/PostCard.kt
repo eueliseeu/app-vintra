@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,10 +47,9 @@ import com.vintra.app.R
 import com.vintra.app.core.util.formatPostTimestamp
 import com.vintra.app.domain.model.AuthProvider
 import com.vintra.app.domain.model.Post
+import com.vintra.app.ui.components.VerifiedBadge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.platform.LocalContext
-import com.vintra.app.ui.components.VerifiedBadge
 
 @Composable
 fun PostCard(
@@ -57,11 +57,20 @@ fun PostCard(
     isLikedByCurrentUser: Boolean = false,
     onLikeClick: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    textPreviewMaxChars: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var avatarBitmap by remember(post.authorPhotoBase64) { mutableStateOf<ImageBitmap?>(null) }
     var postImageBitmap by remember(post.imageBase64) { mutableStateOf<ImageBitmap?>(null) }
+
+    val maxChars = textPreviewMaxChars
+    val isTruncated = maxChars != null && post.text.length > maxChars
+    val displayText = if (isTruncated) {
+        post.text.take(maxChars!!).trimEnd() + "..."
+    } else {
+        post.text
+    }
 
     LaunchedEffect(post.authorPhotoBase64) {
         post.authorPhotoBase64?.let { base64 ->
@@ -69,7 +78,7 @@ fun PostCard(
                 try {
                     val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
                     avatarBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                } catch (exception: Exception) {
+                } catch (_: Exception) {
                     avatarBitmap = null
                 }
             }
@@ -82,7 +91,7 @@ fun PostCard(
                 try {
                     val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
                     postImageBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                } catch (exception: Exception) {
+                } catch (_: Exception) {
                     postImageBitmap = null
                 }
             }
@@ -185,11 +194,24 @@ fun PostCard(
             if (post.text.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = post.text,
+                    text = displayText,
                     color = Color.White.copy(alpha = 0.9f),
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )
+                if (isTruncated) {
+                    Text(
+                        text = "veja mais",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .clickable(enabled = onClick != null) {
+                                onClick?.invoke()
+                            }
+                    )
+                }
             }
 
             if (post.linkUrl.isNotBlank()) {
