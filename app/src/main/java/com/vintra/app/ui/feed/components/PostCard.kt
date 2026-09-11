@@ -257,15 +257,11 @@ private fun ProviderBadge(provider: AuthProvider) {
             )
         }
         AuthProvider.GOOGLE -> {
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF4285F4)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "G", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
+            Image(
+                painter = painterResource(id = R.drawable.google),
+                contentDescription = "Google Provider",
+                modifier = Modifier.size(18.dp)
+            )
         }
         else -> {}
     }
