@@ -1,5 +1,6 @@
 package com.vintra.app.data.model
 
 data class UsernameDto @JvmOverloads constructor(
-    val uid: String = ""
+    val uid: String = "",
+    val email: String = ""
 )

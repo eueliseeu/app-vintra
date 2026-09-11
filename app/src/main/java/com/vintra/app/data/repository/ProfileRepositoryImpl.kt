@@ -5,7 +5,9 @@ import com.vintra.app.data.mapper.toDomain
 import com.vintra.app.data.mapper.toDto
 import com.vintra.app.data.model.UserProfileDto
 import com.vintra.app.data.model.UsernameDto
+import com.vintra.app.domain.model.AuthProvider
 import com.vintra.app.domain.model.UserProfile
+import com.vintra.app.domain.repository.EmailLookupResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ProfileRepository
 import com.vintra.app.domain.repository.SaveProfileResult
@@ -45,6 +47,18 @@ class ProfileRepositoryImpl @Inject constructor(
         UsernameAvailability.Error(exception.message ?: "Erro ao verificar username.")
     }
 
+    override suspend fun getEmailForUsername(username: String): EmailLookupResult = try {
+        val snapshot = firestore.collection(COLLECTION_USERNAMES).document(username).get().await()
+        val dto = snapshot.toObject(UsernameDto::class.java)
+        if (!snapshot.exists() || dto?.email.isNullOrBlank()) {
+            EmailLookupResult.UsernameNotFound
+        } else {
+            EmailLookupResult.Success(dto!!.email)
+        }
+    } catch (exception: Exception) {
+        EmailLookupResult.Error(exception.message ?: "Erro ao buscar usuário.")
+    }
+
     override suspend fun saveProfile(
         uid: String,
         name: String,
@@ -52,6 +66,7 @@ class ProfileRepositoryImpl @Inject constructor(
         email: String,
         birthDateMillis: Long,
         nationality: String,
+        provider: AuthProvider,
         previousUsername: String?
     ): SaveProfileResult {
         val usersRef = firestore.collection(COLLECTION_USERS).document(uid)
@@ -78,11 +93,14 @@ class ProfileRepositoryImpl @Inject constructor(
                 val existingUserSnapshot = transaction.get(usersRef)
                 val existingDto = existingUserSnapshot.toObject(UserProfileDto::class.java)
                 val createdAt = existingDto?.createdAt?.takeIf { it > 0 } ?: System.currentTimeMillis()
+                val resolvedProvider = existingDto?.provider?.takeIf { it.isNotBlank() } ?: provider.name
 
                 if (shouldWriteUsername) {
                     oldUsernameRef?.let { transaction.delete(it) }
-                    transaction.set(newUsernameRef, UsernameDto(uid = uid))
+                    transaction.set(newUsernameRef, UsernameDto(uid = uid, email = email))
                 }
+
+                val existingVerified = existingDto?.isVerified == true
 
                 val profile = UserProfile(
                     uid = uid,
@@ -91,8 +109,10 @@ class ProfileRepositoryImpl @Inject constructor(
                     email = email,
                     birthDateMillis = birthDateMillis,
                     nationality = nationality,
+                    provider = runCatching { AuthProvider.valueOf(resolvedProvider) }.getOrDefault(provider),
                     createdAt = createdAt,
-                    updatedAt = System.currentTimeMillis()
+                    updatedAt = System.currentTimeMillis(),
+                    isVerified = existingVerified
                 )
                 transaction.set(usersRef, profile.toDto())
                 Unit
