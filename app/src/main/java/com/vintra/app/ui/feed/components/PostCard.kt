@@ -21,6 +21,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Comment
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,7 +52,13 @@ import androidx.compose.ui.platform.LocalContext
 import com.vintra.app.ui.components.VerifiedBadge
 
 @Composable
-fun PostCard(post: Post, onClick: (() -> Unit)? = null, modifier: Modifier = Modifier) {
+fun PostCard(
+    post: Post,
+    isLikedByCurrentUser: Boolean = false,
+    onLikeClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     var avatarBitmap by remember(post.authorPhotoBase64) { mutableStateOf<ImageBitmap?>(null) }
     var postImageBitmap by remember(post.imageBase64) { mutableStateOf<ImageBitmap?>(null) }
@@ -222,24 +229,56 @@ fun PostCard(post: Post, onClick: (() -> Unit)? = null, modifier: Modifier = Mod
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable(enabled = onClick != null) {
-                    onClick?.invoke()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable(enabled = onLikeClick != null) {
+                        onLikeClick?.invoke()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ThumbUp,
+                        contentDescription = "Like",
+                        tint = if (isLikedByCurrentUser) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.White.copy(alpha = 0.55f)
+                        },
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${post.likeCount}",
+                        color = if (isLikedByCurrentUser) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.White.copy(alpha = 0.55f)
+                        },
+                        fontSize = 13.sp
+                    )
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Comment,
-                    contentDescription = "Comments",
-                    tint = Color.White.copy(alpha = 0.55f),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "${post.commentCount}",
-                    color = Color.White.copy(alpha = 0.55f),
-                    fontSize = 13.sp
-                )
+
+                Spacer(modifier = Modifier.width(20.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable(enabled = onClick != null) {
+                        onClick?.invoke()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Comment,
+                        contentDescription = "Comments",
+                        tint = Color.White.copy(alpha = 0.55f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${post.commentCount}",
+                        color = Color.White.copy(alpha = 0.55f),
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }
