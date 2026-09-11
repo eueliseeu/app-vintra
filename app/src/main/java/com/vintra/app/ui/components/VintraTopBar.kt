@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.vintra.app.R
 import com.vintra.app.ui.theme.titleColor
 
-private val TOP_BAR_LOGO_SIZE = 50.dp
+private val TOP_BAR_LOGO_SIZE = 60.dp
 private val TOP_BAR_AVATAR_SIZE = 40.dp
 
 @Composable
@@ -54,7 +54,8 @@ fun VintraTopBar(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            // TODO: Ajuste o top para
+            .padding(start = 20.dp, end = 20.dp, top = 35.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
