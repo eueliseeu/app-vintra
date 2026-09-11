@@ -6,6 +6,7 @@ import com.vintra.app.domain.model.Post
 data class PostDetailUiState(
     val isLoadingPost: Boolean = true,
     val post: Post? = null,
+    val currentUid: String? = null,
     val comments: List<Comment> = emptyList(),
     val isLoadingComments: Boolean = true,
     val commentText: String = "",

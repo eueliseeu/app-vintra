@@ -9,10 +9,12 @@ import com.vintra.app.domain.repository.CreateCommentResult
 import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ObserveCommentsResult
+import com.vintra.app.domain.repository.ToggleLikeResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.comment.CreateCommentUseCase
 import com.vintra.app.domain.usecase.comment.ObserveCommentsUseCase
 import com.vintra.app.domain.usecase.post.GetPostByIdUseCase
+import com.vintra.app.domain.usecase.post.ToggleLikeUseCase
 import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
 import com.vintra.app.domain.usecase.profile.GetProfileUseCase
 import com.vintra.app.ui.navigation.PostDetailRoute
@@ -35,6 +37,7 @@ class PostDetailViewModel @Inject constructor(
     private val getPostByIdUseCase: GetPostByIdUseCase,
     private val observeCommentsUseCase: ObserveCommentsUseCase,
     private val createCommentUseCase: CreateCommentUseCase,
+    private val toggleLikeUseCase: ToggleLikeUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -44,6 +47,7 @@ class PostDetailViewModel @Inject constructor(
     val uiState: StateFlow<PostDetailUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update { it.copy(currentUid = getCurrentUserUseCase()?.uid) }
         loadPost()
         observeComments()
     }
@@ -54,6 +58,28 @@ class PostDetailViewModel @Inject constructor(
 
     fun clearToast() {
         _uiState.update { it.copy(toastMessage = null) }
+    }
+
+    fun toggleLike() {
+        val post = _uiState.value.post ?: return
+        val uid = _uiState.value.currentUid ?: return
+        val alreadyLiked = post.likedBy.contains(uid)
+
+        val optimisticPost = if (alreadyLiked) {
+            post.copy(likedBy = post.likedBy - uid, likeCount = (post.likeCount - 1).coerceAtLeast(0))
+        } else {
+            post.copy(likedBy = post.likedBy + uid, likeCount = post.likeCount + 1)
+        }
+        _uiState.update { it.copy(post = optimisticPost) }
+
+        viewModelScope.launch {
+            when (val result = toggleLikeUseCase(post.id, uid)) {
+                is ToggleLikeResult.Success -> Unit
+                is ToggleLikeResult.Error -> {
+                    _uiState.update { it.copy(post = post, toastMessage = result.message) }
+                }
+            }
+        }
     }
 
     fun sendComment() {

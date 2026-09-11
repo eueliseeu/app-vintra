@@ -14,6 +14,11 @@ sealed interface ObservePostsResult {
     data class Error(val message: String) : ObservePostsResult
 }
 
+sealed interface ToggleLikeResult {
+    data object Success : ToggleLikeResult
+    data class Error(val message: String) : ToggleLikeResult
+}
+
 interface PostRepository {
     suspend fun createPost(
         authorUid: String,
@@ -31,4 +36,6 @@ interface PostRepository {
     fun observeFeed(limit: Long = 30): Flow<ObservePostsResult>
 
     suspend fun getPostById(postId: String): Post?
+
+    suspend fun toggleLike(postId: String, uid: String): ToggleLikeResult
 }

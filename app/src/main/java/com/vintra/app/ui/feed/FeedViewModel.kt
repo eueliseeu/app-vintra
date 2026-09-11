@@ -8,9 +8,11 @@ import com.vintra.app.domain.repository.CreatePostResult
 import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ObservePostsResult
+import com.vintra.app.domain.repository.ToggleLikeResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.post.CreatePostUseCase
 import com.vintra.app.domain.usecase.post.ObserveFeedUseCase
+import com.vintra.app.domain.usecase.post.ToggleLikeUseCase
 import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
 import com.vintra.app.domain.usecase.profile.GetProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,13 +34,15 @@ class FeedViewModel @Inject constructor(
     private val getProfileUseCase: GetProfileUseCase,
     private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
     private val createPostUseCase: CreatePostUseCase,
-    private val observeFeedUseCase: ObserveFeedUseCase
+    private val observeFeedUseCase: ObserveFeedUseCase,
+    private val toggleLikeUseCase: ToggleLikeUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update { it.copy(currentUid = getCurrentUserUseCase()?.uid) }
         observeFeed()
     }
 
@@ -89,6 +93,33 @@ class FeedViewModel @Inject constructor(
         _uiState.update { it.copy(postPublished = false) }
     }
 
+    fun toggleLike(postId: String) {
+        val uid = _uiState.value.currentUid ?: return
+
+        _uiState.update { state ->
+            state.copy(
+                posts = state.posts.map { post ->
+                    if (post.id != postId) return@map post
+                    val alreadyLiked = post.likedBy.contains(uid)
+                    if (alreadyLiked) {
+                        post.copy(likedBy = post.likedBy - uid, likeCount = (post.likeCount - 1).coerceAtLeast(0))
+                    } else {
+                        post.copy(likedBy = post.likedBy + uid, likeCount = post.likeCount + 1)
+                    }
+                }
+            )
+        }
+
+        viewModelScope.launch {
+            when (val result = toggleLikeUseCase(postId, uid)) {
+                is ToggleLikeResult.Success -> Unit
+                is ToggleLikeResult.Error -> {
+                    _uiState.update { it.copy(toastMessage = result.message) }
+                }
+            }
+        }
+    }
+
     fun publishPost() {
         val state = _uiState.value
         val uid = getCurrentUserUseCase()?.uid ?: return
@@ -100,7 +131,7 @@ class FeedViewModel @Inject constructor(
 
         val normalizedLink = state.postLinkUrl.trim()
         if (normalizedLink.isNotBlank() && !normalizedLink.startsWith("https://") && !normalizedLink.startsWith("http://")) {
-            _uiState.update { it.copy(toastMessage = "O link deve começar com http:// ou https://.") }
+            _uiState.update { it.copy(toastMessage = "The link must begin with http:// or https://.") }
             return
         }
 

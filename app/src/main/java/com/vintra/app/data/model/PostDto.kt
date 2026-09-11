@@ -16,5 +16,7 @@ data class PostDto @JvmOverloads constructor(
     val commentCount: Int = 0,
     @get:PropertyName("isVerified")
     @set:PropertyName("isVerified")
-    var isVerified: Boolean = false
+    var isVerified: Boolean = false,
+    val likedBy: List<String> = emptyList(),
+    val likeCount: Int = 0
 )

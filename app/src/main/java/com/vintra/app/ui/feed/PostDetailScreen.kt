@@ -132,7 +132,12 @@ fun PostDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         item {
-                            PostCard(post = state.post!!)
+                            PostCard(
+                                post = state.post!!,
+                                isLikedByCurrentUser = state.currentUid != null &&
+                                        state.post!!.likedBy.contains(state.currentUid),
+                                onLikeClick = { viewModel.toggleLike() }
+                            )
                         }
 
                         item {

@@ -17,5 +17,7 @@ fun PostDto.toDomain(id: String): Post = Post(
     imageBase64 = imageBase64,
     createdAt = createdAt,
     commentCount = commentCount,
-    isVerified = isVerified
+    isVerified = isVerified,
+    likedBy = likedBy,
+    likeCount = likeCount
 )

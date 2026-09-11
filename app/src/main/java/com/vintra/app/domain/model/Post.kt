@@ -13,5 +13,7 @@ data class Post(
     val imageBase64: String?,
     val createdAt: Long,
     val commentCount: Int = 0,
-    val isVerified: Boolean = false
+    val isVerified: Boolean = false,
+    val likedBy: List<String> = emptyList(),
+    val likeCount: Int = 0
 )

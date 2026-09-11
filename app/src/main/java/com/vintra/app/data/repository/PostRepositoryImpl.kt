@@ -1,5 +1,6 @@
 package com.vintra.app.data.repository
 
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.vintra.app.data.mapper.toDomain
@@ -10,6 +11,7 @@ import com.vintra.app.domain.model.Post
 import com.vintra.app.domain.repository.CreatePostResult
 import com.vintra.app.domain.repository.ObservePostsResult
 import com.vintra.app.domain.repository.PostRepository
+import com.vintra.app.domain.repository.ToggleLikeResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,12 +55,14 @@ class PostRepositoryImpl @Inject constructor(
             imageBase64 = imageBase64,
             createdAt = System.currentTimeMillis(),
             commentCount = 0,
-            isVerified = isVerified
+            isVerified = isVerified,
+            likedBy = emptyList(),
+            likeCount = 0
         )
         val docRef = firestore.collection(COLLECTION_POSTS).add(dto).await()
         CreatePostResult.Success(docRef.id)
     } catch (exception: Exception) {
-        CreatePostResult.Error(exception.message ?: "Erro ao publicar post.")
+        CreatePostResult.Error(exception.message ?: "Error publishing the post.")
     }
 
     override fun observeFeed(limit: Long): Flow<ObservePostsResult> = callbackFlow {
@@ -67,7 +71,7 @@ class PostRepositoryImpl @Inject constructor(
             .limit(limit)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(ObservePostsResult.Error(error.message ?: "Erro ao observar feed."))
+                    trySend(ObservePostsResult.Error(error.message ?: "Error observing feed."))
                     return@addSnapshotListener
                 }
 
@@ -97,6 +101,39 @@ class PostRepositoryImpl @Inject constructor(
         }
     } catch (exception: Exception) {
         null
+    }
+
+    override suspend fun toggleLike(postId: String, uid: String): ToggleLikeResult = try {
+        val postRef = firestore.collection(COLLECTION_POSTS).document(postId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(postRef)
+            @Suppress("UNCHECKED_CAST")
+            val likedBy = snapshot.get("likedBy") as? List<String> ?: emptyList()
+            val alreadyLiked = likedBy.contains(uid)
+
+            if (alreadyLiked) {
+                transaction.update(
+                    postRef,
+                    mapOf(
+                        "likedBy" to FieldValue.arrayRemove(uid),
+                        "likeCount" to FieldValue.increment(-1)
+                    )
+                )
+            } else {
+                transaction.update(
+                    postRef,
+                    mapOf(
+                        "likedBy" to FieldValue.arrayUnion(uid),
+                        "likeCount" to FieldValue.increment(1)
+                    )
+                )
+            }
+        }.await()
+
+        ToggleLikeResult.Success
+    } catch (exception: Exception) {
+        ToggleLikeResult.Error(exception.message ?: "Error liking.")
     }
 
     private suspend fun enrichPostsWithVerification(posts: List<Post>): List<Post> {
