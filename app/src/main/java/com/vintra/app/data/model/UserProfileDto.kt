@@ -1,5 +1,7 @@
 package com.vintra.app.data.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class UserProfileDto @JvmOverloads constructor(
     val name: String = "",
     val username: String = "",
@@ -9,5 +11,7 @@ data class UserProfileDto @JvmOverloads constructor(
     val provider: String = "",
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
-    val isVerified: Boolean = false
+    @get:PropertyName("isVerified")
+    @set:PropertyName("isVerified")
+    var isVerified: Boolean = false
 )

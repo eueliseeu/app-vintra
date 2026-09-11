@@ -1,5 +1,7 @@
 package com.vintra.app.data.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class PostDto @JvmOverloads constructor(
     val authorUid: String = "",
     val authorName: String = "",
@@ -12,5 +14,7 @@ data class PostDto @JvmOverloads constructor(
     val imageBase64: String? = null,
     val createdAt: Long = 0L,
     val commentCount: Int = 0,
-    val isVerified: Boolean = false
+    @get:PropertyName("isVerified")
+    @set:PropertyName("isVerified")
+    var isVerified: Boolean = false
 )
