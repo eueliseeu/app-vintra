@@ -1,9 +1,13 @@
 package com.vintra.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -11,7 +15,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.res.painterResource
-import androidx.compose.material3.Icon
 import androidx.compose.ui.unit.dp
 import com.vintra.app.ui.navigation.BottomTab
 import com.vintra.app.ui.navigation.TabIcon
@@ -21,6 +24,7 @@ import com.vintra.app.ui.theme.FieldBackground
 fun VintraBottomBar(
     selectedTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
+    onCreatePost: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val selectedIndex = BottomTab.entries.indexOf(selectedTab)
@@ -134,50 +138,63 @@ fun VintraBottomBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             BottomTab.entries.forEach { tab ->
-
                 Box(
                     modifier = Modifier.size(52.dp),
                     contentAlignment = Alignment.Center
                 ) {
-
-                    if (tab != selectedTab) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    onTabSelected(tab)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IconContent(
-                                tab = tab,
-                                color = Color(0xFF858585)
-                            )
-                        }
-                    }
-
-                    if (tab == selectedTab) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .offset(y = (-18).dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Canvas(
-                                modifier = Modifier.fillMaxSize()
+                    if (tab != BottomTab.HOME) {
+                        if (tab != selectedTab) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onTabSelected(tab) },
+                                contentAlignment = Alignment.Center
                             ) {
-                                drawCircle(Color.White)
+                                IconContent(
+                                    tab = tab,
+                                    color = Color(0xFF858585)
+                                )
                             }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .offset(y = (10).dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Canvas(
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    drawCircle(Color.White)
+                                }
 
-                            IconContent(
-                                tab = tab,
-                                color = Color.Black
-                            )
+                                IconContent(
+                                    tab = tab,
+                                    color = Color.Black
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = (-18).dp)
+                .clip(CircleShape)
+                .background(Color.White)
+                .clickable(onClick = onCreatePost),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "New post",
+                tint = Color.Black
+            )
         }
     }
 }

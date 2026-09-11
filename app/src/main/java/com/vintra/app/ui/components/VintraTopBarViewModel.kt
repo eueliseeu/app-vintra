@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
+import com.vintra.app.domain.usecase.auth.SignOutUseCase
 import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
 import com.vintra.app.domain.usecase.profile.UploadPhotoResult
 import com.vintra.app.domain.usecase.profile.UploadProfilePhotoUseCase
@@ -26,7 +27,8 @@ data class VintraTopBarUiState(
 class VintraTopBarViewModel @Inject constructor(
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val getProfilePhotoUseCase: GetProfilePhotoUseCase,
-    private val uploadProfilePhotoUseCase: UploadProfilePhotoUseCase
+    private val uploadProfilePhotoUseCase: UploadProfilePhotoUseCase,
+    private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VintraTopBarUiState())
@@ -62,6 +64,10 @@ class VintraTopBarViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun logout() {
+        signOutUseCase()
     }
 
     fun clearToast() {
