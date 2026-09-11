@@ -82,7 +82,6 @@ fun HomeScreen(
                     contentPadding = PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Cabeçalho fixo: fica grudado no topo enquanto os posts rolam por baixo.
                     stickyHeader {
                         Column(
                             modifier = Modifier
@@ -94,7 +93,7 @@ fun HomeScreen(
                                 firstName = uiState.firstName,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 32.dp, bottom = 12.dp)
+                                    .padding(top = 4.dp, bottom = 8.dp)
                             )
 
                             Box(
@@ -117,6 +116,9 @@ fun HomeScreen(
                         ) { post ->
                             PostCard(
                                 post = post,
+                                isLikedByCurrentUser = feedState.currentUid != null &&
+                                        post.likedBy.contains(feedState.currentUid),
+                                onLikeClick = { feedViewModel.toggleLike(post.id) },
                                 onClick = { onPostClick(post.id) }
                             )
                         }
