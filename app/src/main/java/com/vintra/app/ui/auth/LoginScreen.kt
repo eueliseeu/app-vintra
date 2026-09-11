@@ -1,8 +1,10 @@
 package com.vintra.app.ui.auth
 
+import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -30,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,10 +45,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.vintra.app.BuildConfig
 import com.vintra.app.R
 import com.vintra.app.ui.components.CenterToast
+import com.vintra.app.ui.components.appTextFieldColors
+import com.vintra.app.ui.theme.DarkBackground
 import com.vintra.app.ui.theme.FieldBackground
 import kotlinx.coroutines.delay
-import com.vintra.app.ui.theme.DarkBackground
-import com.vintra.app.ui.components.appTextFieldColors
 
 private const val TOAST_DURATION_MS = 2500L
 
@@ -66,14 +71,11 @@ fun LoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize() .background(DarkBackground)
-
-     ) {
+    Box(modifier = Modifier.fillMaxSize().background(DarkBackground)) {
         when (uiState.step) {
             LoginScreenStep.FORM -> LoginForm(uiState = uiState, viewModel = viewModel)
             LoginScreenStep.ACCOUNT_CREATED -> AccountCreatedScreen(
                 onContinue = viewModel::onAccountCreatedContinue
-
             )
         }
 
@@ -86,6 +88,8 @@ private fun LoginForm(
     uiState: LoginUiState,
     viewModel: LoginViewModel
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -97,7 +101,7 @@ private fun LoginForm(
         Image(
             painter = painterResource(id = R.drawable.vintra),
             contentDescription = "Logo Vintra",
-            modifier = Modifier.height(72.dp)
+            modifier = Modifier.height(150.dp)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -111,54 +115,6 @@ private fun LoginForm(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        TextField(
-            value = uiState.email,
-            onValueChange = viewModel::onEmailChange,
-            placeholder = { Text("E-mail") },
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            colors = loginFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        TextField(
-            value = uiState.password,
-            onValueChange = viewModel::onPasswordChange,
-            placeholder = { Text("Senha") },
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp),
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            colors = loginFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = viewModel::login,
-            enabled = !uiState.isLoading,
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-        ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-            } else {
-                Text(text = "Access Your Account", fontWeight = FontWeight.Bold)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -168,8 +124,9 @@ private fun LoginForm(
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
             )
             Text(
-                text = "ou",
+                text = "continue with",
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
             HorizontalDivider(
@@ -178,29 +135,71 @@ private fun LoginForm(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedButton(
-            onClick = viewModel::register,
+        Button(
+            onClick = {
+                val activity = context as? Activity
+                if (activity != null) {
+                    viewModel.signInWithGitHub(activity)
+                }
+            },
             enabled = !uiState.isLoading,
             shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = FieldBackground,
+                contentColor = Color.White
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
         ) {
-            Text(text = "Sign up", fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.github),
+                    contentDescription = "GitHub Icon",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = "Sign in with GitHub", fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = { viewModel.signInWithGoogle(context) },
+            enabled = !uiState.isLoading,
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFD9D9D9),
+                contentColor = Color.Black
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.google),
+                    contentDescription = "Google Icon",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = "Sign in with Google", fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Text(
-            text = buildVersionLabel(),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
-            fontSize = 12.sp,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
     }
 }
 
@@ -217,5 +216,3 @@ private fun loginFieldColors() = TextFieldDefaults.colors(
     unfocusedPlaceholderColor = Color.Gray
 )
 
-private fun buildVersionLabel(): String =
-    if (BuildConfig.DEBUG) "Vintra version • v${BuildConfig.VERSION_NAME}" else "v${BuildConfig.VERSION_NAME}"

@@ -20,6 +20,9 @@ private const val TOAST_DURATION_MS = 2500L
 fun AuthenticatedScaffold(
     selectedTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
+    onCreatePost: () -> Unit,
+    onProfileClick: () -> Unit,
+    onLogout: () -> Unit,
     topBarViewModel: VintraTopBarViewModel = hiltViewModel(),
     content: @Composable () -> Unit
 ) {
@@ -43,7 +46,12 @@ fun AuthenticatedScaffold(
                     VintraTopBar(
                         photoBase64 = topBarState.photoBase64,
                         isUploadingPhoto = topBarState.isUploadingPhoto,
-                        onPhotoPicked = topBarViewModel::onPhotoPicked
+                        onPhotoPicked = topBarViewModel::onPhotoPicked,
+                        onProfileClick = onProfileClick,
+                        onLogout = {
+                            topBarViewModel.logout()
+                            onLogout()
+                        }
                     )
                 }
             },
@@ -54,7 +62,8 @@ fun AuthenticatedScaffold(
                         if (tab == BottomTab.HOME) {
                             onTabSelected(tab)
                         }
-                    }
+                    },
+                    onCreatePost = onCreatePost
                 )
             }
         ) { innerPadding ->

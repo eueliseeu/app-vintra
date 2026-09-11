@@ -1,5 +1,6 @@
 package com.vintra.app.domain.repository
 
+import com.vintra.app.domain.model.AuthProvider
 import com.vintra.app.domain.model.UserProfile
 
 sealed interface GetProfileResult {
@@ -19,9 +20,16 @@ sealed interface SaveProfileResult {
     data class Error(val message: String) : SaveProfileResult
 }
 
+sealed interface EmailLookupResult {
+    data class Success(val email: String) : EmailLookupResult
+    data object UsernameNotFound : EmailLookupResult
+    data class Error(val message: String) : EmailLookupResult
+}
+
 interface ProfileRepository {
     suspend fun getProfile(uid: String): GetProfileResult
     suspend fun isUsernameAvailable(username: String, uid: String): UsernameAvailability
+    suspend fun getEmailForUsername(username: String): EmailLookupResult
     suspend fun saveProfile(
         uid: String,
         name: String,
@@ -29,6 +37,7 @@ interface ProfileRepository {
         email: String,
         birthDateMillis: Long,
         nationality: String,
+        provider: AuthProvider,
         previousUsername: String?
     ): SaveProfileResult
 }

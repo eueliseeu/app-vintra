@@ -6,7 +6,7 @@ enum class LoginScreenStep {
 }
 
 data class LoginUiState(
-    val email: String = "",
+    val identifier: String = "",
     val password: String = "",
     val isLoading: Boolean = false,
     val toastMessage: String? = null,

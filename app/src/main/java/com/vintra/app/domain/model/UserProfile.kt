@@ -7,8 +7,10 @@ data class UserProfile(
     val email: String,
     val birthDateMillis: Long,
     val nationality: String,
+    val provider: AuthProvider,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val isVerified: Boolean = false
 )
 
 private const val NINETY_DAYS_MILLIS = 90L * 24 * 60 * 60 * 1000

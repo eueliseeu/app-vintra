@@ -1,11 +1,15 @@
 package com.vintra.app.ui.auth
 
+import android.app.Activity
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.model.AuthResult
 import com.vintra.app.domain.usecase.auth.LoginUseCase
 import com.vintra.app.domain.usecase.auth.RegisterAccountResult
 import com.vintra.app.domain.usecase.auth.RegisterAccountUseCase
+import com.vintra.app.domain.usecase.auth.SignInWithGitHubUseCase
+import com.vintra.app.domain.usecase.auth.SignInWithGoogleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,14 +23,16 @@ private const val MIN_PASSWORD_LENGTH = 6
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
-    private val registerAccountUseCase: RegisterAccountUseCase
+    private val registerAccountUseCase: RegisterAccountUseCase,
+    private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
+    private val signInWithGitHubUseCase: SignInWithGitHubUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun onEmailChange(value: String) {
-        _uiState.update { it.copy(email = value) }
+    fun onIdentifierChange(value: String) {
+        _uiState.update { it.copy(identifier = value) }
     }
 
     fun onPasswordChange(value: String) {
@@ -42,18 +48,18 @@ class LoginViewModel @Inject constructor(
     }
 
     fun login() {
-        val email = _uiState.value.email.trim()
+        val identifier = _uiState.value.identifier.trim()
         val password = _uiState.value.password
 
-        if (email.isEmpty() || password.isEmpty()) {
-            _uiState.update { it.copy(toastMessage = "Please fill in email and password.") }
+        if (identifier.isEmpty() || password.isEmpty()) {
+            _uiState.update { it.copy(toastMessage = "Please fill in your username/e-mail and password.") }
             return
         }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            when (val result = loginUseCase(email, password)) {
+            when (val result = loginUseCase(identifier, password)) {
                 is AuthResult.Success -> {
                     _uiState.update { it.copy(isLoading = false, isLoginSuccessful = true) }
                 }
@@ -61,7 +67,7 @@ class LoginViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, toastMessage = "User not found.") }
                 }
                 is AuthResult.InvalidCredentials -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email or password.") }
+                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid username/e-mail or password.") }
                 }
                 is AuthResult.Error -> {
                     _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
@@ -74,7 +80,7 @@ class LoginViewModel @Inject constructor(
     }
 
     fun register() {
-        val email = _uiState.value.email.trim()
+        val email = _uiState.value.identifier.trim()
         val password = _uiState.value.password
 
         if (email.isEmpty() || password.isEmpty()) {
@@ -90,9 +96,28 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            handleRegisterResult(registerAccountUseCase(email, password))
+        }
+    }
 
-            when (val result = registerAccountUseCase(email, password)) {
-                is RegisterAccountResult.Success -> {
+    fun signInWithGoogle(context: Context) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            handleRegisterResult(signInWithGoogleUseCase(context))
+        }
+    }
+
+    fun signInWithGitHub(activity: Activity) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            handleRegisterResult(signInWithGitHubUseCase(activity))
+        }
+    }
+
+    private fun handleRegisterResult(result: RegisterAccountResult) {
+        when (result) {
+            is RegisterAccountResult.Success -> {
+                if (result.isNewUser) {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -100,29 +125,34 @@ class LoginViewModel @Inject constructor(
                             toastMessage = "Account created successfully!"
                         )
                     }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, isLoginSuccessful = true) }
                 }
-                is RegisterAccountResult.EmailAlreadyInUse -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Email already in use. Try logging in.") }
+            }
+            is RegisterAccountResult.EmailAlreadyInUse -> {
+                _uiState.update { it.copy(isLoading = false, toastMessage = "Email already in use. Try logging in.") }
+            }
+            is RegisterAccountResult.WeakPassword -> {
+                _uiState.update {
+                    it.copy(isLoading = false, toastMessage = "Password is too weak. Use at least $MIN_PASSWORD_LENGTH characters.")
                 }
-                is RegisterAccountResult.WeakPassword -> {
-                    _uiState.update {
-                        it.copy(isLoading = false, toastMessage = "Password is too weak. Use at least $MIN_PASSWORD_LENGTH characters.")
-                    }
+            }
+            is RegisterAccountResult.InvalidEmail -> {
+                _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email.") }
+            }
+            is RegisterAccountResult.DeviceAlreadyRegistered -> {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        toastMessage = "This device already has an account registered. Please log in."
+                    )
                 }
-                is RegisterAccountResult.InvalidEmail -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = "Invalid email.") }
-                }
-                is RegisterAccountResult.DeviceAlreadyRegistered -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            toastMessage = "This device already has an account registered. Please log in."
-                        )
-                    }
-                }
-                is RegisterAccountResult.Error -> {
-                    _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
-                }
+            }
+            is RegisterAccountResult.Cancelled -> {
+                _uiState.update { it.copy(isLoading = false) }
+            }
+            is RegisterAccountResult.Error -> {
+                _uiState.update { it.copy(isLoading = false, toastMessage = result.message) }
             }
         }
     }
