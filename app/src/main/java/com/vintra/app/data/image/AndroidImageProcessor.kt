@@ -19,7 +19,6 @@ private const val INITIAL_JPEG_QUALITY = 90
 private const val MIN_JPEG_QUALITY = 30
 private const val QUALITY_STEP = 10
 
-// Nota: android.media.ExifInterface(InputStream) exige API 24+, que é exatamente o minSdk do projeto.
 class AndroidImageProcessor @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ImageProcessor {

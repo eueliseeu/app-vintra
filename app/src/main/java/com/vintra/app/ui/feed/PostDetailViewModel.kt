@@ -68,7 +68,7 @@ class PostDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isSendingComment = false,
-                        toastMessage = "Faça login para comentar."
+                        toastMessage = "Log in to comment."
                     )
                 }
                 return@launch
@@ -145,7 +145,7 @@ class PostDetailViewModel @Inject constructor(
                 it.copy(
                     isLoadingPost = false,
                     post = post,
-                    errorMessage = if (post == null) "Post não encontrado." else null
+                    errorMessage = if (post == null) "Post not found." else null
                 )
             }
         }

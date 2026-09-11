@@ -94,7 +94,7 @@ class FeedViewModel @Inject constructor(
         val uid = getCurrentUserUseCase()?.uid ?: return
 
         if (state.postTitle.isBlank() && state.postText.isBlank() && state.postLinkUrl.isBlank() && state.postImageUri == null) {
-            _uiState.update { it.copy(toastMessage = "Adicione um texto, título, link ou imagem antes de publicar.") }
+            _uiState.update { it.copy(toastMessage = "Add text, a title, a link, or an image before publishing.") }
             return
         }
 

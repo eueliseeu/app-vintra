@@ -1,4 +1,3 @@
-// app/src/main/java/com/vintra/app/ui/home/components/EventBannerCarousel.kt
 package com.vintra.app.ui.home.components
 
 import androidx.compose.animation.AnimatedContent
@@ -40,7 +39,7 @@ private val EVENT_BANNERS = listOf(
 private const val BANNER_ROTATE_INTERVAL_MS = 4000L
 private val BANNER_WIDTH = 330.dp
 private val BANNER_HEIGHT = 150.dp
-private val FADE_HEIGHT = 30.dp // Altura da área de transição
+private val FADE_HEIGHT = 30.dp
 
 @Composable
 fun EventBannerCarousel(modifier: Modifier = Modifier) {
@@ -57,9 +56,7 @@ fun EventBannerCarousel(modifier: Modifier = Modifier) {
 
     val backgroundColor = MaterialTheme.colorScheme.background
 
-    // Box pai que permite sobreposição controlada com o offset
     Box(modifier = modifier) {
-        // 1. O Banner principal (com os cantos arredondados)
         Box(
             modifier = Modifier
                 .width(BANNER_WIDTH)
@@ -90,14 +87,11 @@ fun EventBannerCarousel(modifier: Modifier = Modifier) {
             }
         }
 
-        // 2. O Gradiente posicionado EXATAMENTE na divisória (metade dentro, metade fora)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .width(BANNER_WIDTH)
                 .height(FADE_HEIGHT)
-                // Joga o gradiente para baixo pela metade da altura dele,
-                // fazendo a ponte perfeita na linha de corte do banner com os posts.
                 .offset(y = (FADE_HEIGHT / 2))
                 .background(
                     Brush.verticalGradient(

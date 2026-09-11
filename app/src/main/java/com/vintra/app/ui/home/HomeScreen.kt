@@ -1,4 +1,3 @@
-// app/src/main/java/com/vintra/app/ui/home/HomeScreen.kt
 package com.vintra.app.ui.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
