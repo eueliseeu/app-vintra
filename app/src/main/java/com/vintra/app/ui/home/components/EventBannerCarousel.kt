@@ -33,7 +33,6 @@ import kotlinx.coroutines.delay
 
 private val EVENT_BANNERS = listOf(
     R.drawable.evento,
-    R.drawable.evento1
 )
 
 private const val BANNER_ROTATE_INTERVAL_MS = 4000L
