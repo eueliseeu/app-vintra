@@ -15,6 +15,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,9 +25,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vintra.app.core.util.greetingForHour
 import com.vintra.app.ui.components.AuthenticatedScaffold
 import com.vintra.app.ui.components.CenterToast
@@ -34,6 +39,7 @@ import com.vintra.app.ui.components.HomeGreetingHeader
 import com.vintra.app.ui.feed.FeedViewModel
 import com.vintra.app.ui.feed.components.PostCard
 import com.vintra.app.ui.home.components.EventBannerCarousel
+import com.vintra.app.ui.home.components.EventBannerPlacement
 import com.vintra.app.ui.home.components.HomeFeedTabs
 import com.vintra.app.ui.navigation.BottomTab
 import kotlinx.coroutines.delay
@@ -46,9 +52,11 @@ private const val HOME_TEXT_PREVIEW_MAX_CHARS = 300
 @Composable
 fun HomeScreen(
     onCreatePost: () -> Unit,
+    onCreateJob: (() -> Unit)? = null,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
     onPostClick: (String) -> Unit,
+    onNavigateToJobs: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     feedViewModel: FeedViewModel = hiltViewModel()
 ) {
@@ -67,6 +75,17 @@ fun HomeScreen(
         }
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                feedViewModel.onHomeResumed()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(feedState.toastMessage) {
         if (feedState.toastMessage != null) {
             delay(TOAST_DURATION_MS)
@@ -76,10 +95,18 @@ fun HomeScreen(
 
     AuthenticatedScaffold(
         selectedTab = selectedTab,
-        onTabSelected = { selectedTab = it },
+        onTabSelected = { tab ->
+            when (tab) {
+                BottomTab.HOME -> selectedTab = BottomTab.HOME
+                BottomTab.STATEMENT -> onNavigateToJobs()
+                BottomTab.RANKING -> selectedTab = tab
+            }
+        },
         onCreatePost = onCreatePost,
+        onCreateJob = onCreateJob,
         onProfileClick = onProfileClick,
-        onLogout = onLogout
+        onLogout = onLogout,
+        topBarTitle = "Global"
     ) {
         Box(
             modifier = Modifier
@@ -116,7 +143,6 @@ fun HomeScreen(
                                     .padding(bottom = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                EventBannerCarousel()
                             }
 
                             HomeFeedTabs(
@@ -128,7 +154,9 @@ fun HomeScreen(
                     }
 
                     if (feedState.isLoadingFeed) {
-                        item { CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp)) }
+                        item {
+                            CircularProgressIndicator(modifier = Modifier.padding(top = 24.dp))
+                        }
                     } else if (visiblePosts.isEmpty()) {
                         item {
                             Text(
@@ -138,10 +166,10 @@ fun HomeScreen(
                                 },
                                 color = Color.White.copy(alpha = 0.5f),
                                 fontSize = 14.sp,
+                                textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = 32.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    .padding(top = 32.dp)
                             )
                         }
                     } else {

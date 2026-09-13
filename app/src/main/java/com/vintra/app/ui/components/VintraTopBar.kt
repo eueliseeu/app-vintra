@@ -47,6 +47,7 @@ fun VintraTopBar(
     onPhotoPicked: (Uri) -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
+    title: String = "Global",
     modifier: Modifier = Modifier
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
@@ -70,12 +71,14 @@ fun VintraTopBar(
             contentScale = ContentScale.Fit,
             modifier = Modifier.size(TOP_BAR_LOGO_SIZE)
         )
+
         Text(
-            text = "Global",
+            text = title,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             color = titleColor
         )
+
         Box {
             ProfileAvatar(
                 base64 = photoBase64,

@@ -12,6 +12,6 @@ sealed interface TabIcon {
 enum class BottomTab(val icon: TabIcon, val contentDescription: String) {
     STATEMENT(TabIcon.Drawable(R.drawable.file_text), "Statement"),
     HOME(TabIcon.Drawable(R.drawable.house), "Home"),
-    RANKING(TabIcon.Drawable(R.drawable.trending_up), "Ranking"),
+    RANKING(TabIcon.Drawable(R.drawable.help), "Ranking"),
 
 }
