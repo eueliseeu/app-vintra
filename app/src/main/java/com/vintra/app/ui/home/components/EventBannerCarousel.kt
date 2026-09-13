@@ -1,5 +1,6 @@
 package com.vintra.app.ui.home.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -31,9 +32,25 @@ import androidx.compose.ui.unit.dp
 import com.vintra.app.R
 import kotlinx.coroutines.delay
 
-private val EVENT_BANNERS = listOf(
-    R.drawable.evento,
+enum class EventBannerPlacement {
+    HOME,
+    JOBS
+}
+
+@DrawableRes
+private val HOME_EVENT_BANNERS: List<Int> = listOf(
+    R.drawable.evento
 )
+
+@DrawableRes
+private val JOBS_EVENT_BANNERS: List<Int> = listOf(
+    R.drawable.vintra01
+)
+
+private fun bannersFor(placement: EventBannerPlacement): List<Int> = when (placement) {
+    EventBannerPlacement.HOME -> HOME_EVENT_BANNERS
+    EventBannerPlacement.JOBS -> JOBS_EVENT_BANNERS
+}
 
 private const val BANNER_ROTATE_INTERVAL_MS = 4000L
 private val BANNER_WIDTH = 330.dp
@@ -41,15 +58,20 @@ private val BANNER_HEIGHT = 150.dp
 private val FADE_HEIGHT = 30.dp
 
 @Composable
-fun EventBannerCarousel(modifier: Modifier = Modifier) {
-    if (EVENT_BANNERS.isEmpty()) return
+fun EventBannerCarousel(
+    placement: EventBannerPlacement = EventBannerPlacement.HOME,
+    modifier: Modifier = Modifier
+) {
+    val banners = bannersFor(placement)
+    if (banners.isEmpty()) return
 
-    var currentIndex by remember { mutableIntStateOf(0) }
+    var currentIndex by remember(placement) { mutableIntStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(placement, banners.size) {
+        if (banners.size <= 1) return@LaunchedEffect
         while (true) {
             delay(BANNER_ROTATE_INTERVAL_MS)
-            currentIndex = (currentIndex + 1) % EVENT_BANNERS.size
+            currentIndex = (currentIndex + 1) % banners.size
         }
     }
 
@@ -76,7 +98,7 @@ fun EventBannerCarousel(modifier: Modifier = Modifier) {
                 label = "event_banner_carousel"
             ) { index ->
                 Image(
-                    painter = painterResource(id = EVENT_BANNERS[index]),
+                    painter = painterResource(id = banners[index.coerceIn(0, banners.lastIndex)]),
                     contentDescription = "Event banner",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
