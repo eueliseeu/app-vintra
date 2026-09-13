@@ -1,4 +1,3 @@
-// app/src/main/java/com/vintra/app/MainActivity.kt
 package com.vintra.app
 
 import android.os.Bundle
@@ -15,14 +14,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import dagger.hilt.android.AndroidEntryPoint
 import com.vintra.app.ui.auth.LoginScreen
 import com.vintra.app.ui.feed.CreatePostScreen
 import com.vintra.app.ui.feed.PostDetailScreen
 import com.vintra.app.ui.home.HomeScreen
+import com.vintra.app.ui.jobs.CreateJobScreen
+import com.vintra.app.ui.jobs.JobDetailScreen
+import com.vintra.app.ui.jobs.JobsScreen
 import com.vintra.app.ui.navigation.CreateJobRoute
 import com.vintra.app.ui.navigation.CreatePostRoute
 import com.vintra.app.ui.navigation.HomeRoute
+import com.vintra.app.ui.navigation.JobDetailRoute
 import com.vintra.app.ui.navigation.JobsRoute
 import com.vintra.app.ui.navigation.LoginRoute
 import com.vintra.app.ui.navigation.PostDetailRoute
@@ -32,6 +34,7 @@ import com.vintra.app.ui.profile.ProfileSetupScreen
 import com.vintra.app.ui.session.AuthStateViewModel
 import com.vintra.app.ui.session.SessionRouter
 import com.vintra.app.ui.theme.AppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -110,13 +113,43 @@ class MainActivity : ComponentActivity() {
                     composable<HomeRoute> {
                         HomeScreen(
                             onCreatePost = { navController.navigate(CreatePostRoute) },
-                            onCreateJob = { navController.navigate(CreateJobRoute) },
+                            onCreateJob = { navController.navigate(CreateJobRoute()) },
                             onProfileClick = { navController.navigate(ProfileSetupRoute) },
-                            onLogout = { /* ... */ },
-                            onPostClick = { postId -> navController.navigate(PostDetailRoute(postId)) },
+                            onLogout = {
+                                navController.navigate(SessionRouterRoute) {
+                                    popUpTo<HomeRoute> { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            onPostClick = { postId ->
+                                navController.navigate(PostDetailRoute(postId))
+                            },
                             onNavigateToJobs = {
                                 navController.navigate(JobsRoute) {
                                     launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+
+                    composable<JobsRoute> {
+                        JobsScreen(
+                            onCreatePost = { navController.navigate(CreatePostRoute) },
+                            onCreateJob = { navController.navigate(CreateJobRoute()) },
+                            onProfileClick = { navController.navigate(ProfileSetupRoute) },
+                            onLogout = {
+                                navController.navigate(SessionRouterRoute) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            },
+                            onJobClick = { jobId ->
+                                navController.navigate(JobDetailRoute(jobId))
+                            },
+                            onNavigateToHome = {
+                                navController.navigate(HomeRoute) {
+                                    launchSingleTop = true
+                                    popUpTo(HomeRoute) { inclusive = true }
                                 }
                             }
                         )
@@ -136,9 +169,39 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    composable<CreateJobRoute> {
+                        CreateJobScreen(
+                            onClose = { navController.popBackStack() },
+                            onSuccess = { navController.popBackStack() },
+                            onProfileClick = { navController.navigate(ProfileSetupRoute) },
+                            onLogout = {
+                                navController.navigate(SessionRouterRoute) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+
                     composable<PostDetailRoute> {
                         PostDetailScreen(
                             onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable<JobDetailRoute> {
+                        JobDetailScreen(
+                            onBack = { navController.popBackStack() },
+                            onEdit = { jobId ->
+                                navController.navigate(CreateJobRoute(jobId = jobId))
+                            },
+                            onProfileClick = { navController.navigate(ProfileSetupRoute) },
+                            onLogout = {
+                                navController.navigate(SessionRouterRoute) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                     }
                 }
