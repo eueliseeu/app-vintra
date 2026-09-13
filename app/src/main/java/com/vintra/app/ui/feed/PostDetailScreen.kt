@@ -23,7 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -70,11 +75,20 @@ fun PostDetailScreen(
     viewModel: PostDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    var showDeletePostDialog by remember { mutableStateOf(false) }
+    var postMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.toastMessage) {
         if (state.toastMessage != null) {
             delay(TOAST_DURATION_MS)
             viewModel.clearToast()
+        }
+    }
+
+    LaunchedEffect(state.postDeleted) {
+        if (state.postDeleted) {
+            delay(400)
+            onBack()
         }
     }
 
@@ -93,9 +107,36 @@ fun PostDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "To go back",
+                            contentDescription = "Back",
                             tint = Color.White
                         )
+                    }
+                },
+                actions = {
+                    if (state.isPostOwner) {
+                        Box {
+                            IconButton(onClick = { postMenuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = "Options",
+                                    tint = Color.White
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = postMenuExpanded,
+                                onDismissRequest = { postMenuExpanded = false },
+                                shape = RoundedCornerShape(12.dp),
+                                containerColor = Color(0xFF131313)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete post", color = Color(0xFFFF6B6B)) },
+                                    onClick = {
+                                        postMenuExpanded = false
+                                        showDeletePostDialog = true
+                                    }
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -126,81 +167,90 @@ fun PostDetailScreen(
                     )
                 }
                 else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        item {
-                            PostCard(
-                                post = state.post!!,
-                                isLikedByCurrentUser = state.currentUid != null &&
-                                        state.post!!.likedBy.contains(state.currentUid),
-                                onLikeClick = { viewModel.toggleLike() }
-                            )
-                        }
-
-                        item {
-                            CommentInputBar(
-                                text = state.commentText,
-                                isSending = state.isSendingComment,
-                                onTextChange = viewModel::onCommentTextChange,
-                                onSend = viewModel::sendComment
-                            )
-                        }
-
-                        item {
-                            Text(
-                                text = "Comments (${state.comments.size})",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            )
-                        }
-
-                        if (state.errorMessage != null) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(bottom = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             item {
-                                Text(
-                                    text = "Erro: ${state.errorMessage}",
-                                    color = Color.Red.copy(alpha = 0.85f),
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                PostCard(
+                                    post = state.post!!,
+                                    isLikedByCurrentUser = state.currentUid != null &&
+                                            state.post!!.likedBy.contains(state.currentUid),
+                                    onLikeClick = { viewModel.toggleLike() }
                                 )
                             }
-                        }
 
-                        // Lista de comentários
-                        if (state.isLoadingComments) {
                             item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        color = Color.White,
-                                        strokeWidth = 2.dp
+                                CommentInputBar(
+                                    text = state.commentText,
+                                    isSending = state.isSendingComment,
+                                    onTextChange = viewModel::onCommentTextChange,
+                                    onSend = viewModel::sendComment
+                                )
+                            }
+
+                            if (state.errorMessage != null) {
+                                item {
+                                    Text(
+                                        text = "Error: ${state.errorMessage}",
+                                        color = Color.Red.copy(alpha = 0.85f),
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 8.dp
+                                        )
                                     )
                                 }
                             }
-                        } else if (state.comments.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "No comments yet. Be the first!",
-                                    color = Color.White.copy(alpha = 0.4f),
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
-                        } else {
-                            items(
-                                items = state.comments,
-                                key = { it.id }
-                            ) { comment ->
-                                CommentItem(comment = comment)
+
+                            if (state.isLoadingComments) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(28.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                }
+                            } else if (state.comments.isEmpty()) {
+                                item {
+                                    Text(
+                                        text = "No comments yet. Be the first!",
+                                        color = Color.White.copy(alpha = 0.4f),
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 8.dp
+                                        )
+                                    )
+                                }
+                            } else {
+                                items(
+                                    items = state.comments,
+                                    key = { it.id }
+                                ) { comment ->
+                                    CommentItem(
+                                        comment = comment,
+                                        currentUid = state.currentUid,
+                                        postAuthorUid = state.post?.authorUid,
+                                        isEditing = state.editingCommentId == comment.id,
+                                        editingText = state.editingCommentText,
+                                        isSaving = state.isSavingComment,
+                                        onStartEdit = { viewModel.startEditComment(comment) },
+                                        onEditingTextChange = viewModel::onEditingCommentTextChange,
+                                        onSaveEdit = viewModel::saveEditComment,
+                                        onCancelEdit = viewModel::cancelEditComment,
+                                        onDelete = { viewModel.deleteComment(comment) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -210,20 +260,66 @@ fun PostDetailScreen(
             CenterToast(message = state.toastMessage)
         }
     }
+
+    if (showDeletePostDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeletePostDialog = false },
+            title = { Text("Delete post?") },
+            text = { Text("This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeletePostDialog = false
+                        viewModel.deletePost()
+                    }
+                ) {
+                    Text("Delete", color = Color(0xFFFF6B6B))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeletePostDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = Color(0xFF1C1C1E),
+            titleContentColor = Color.White,
+            textContentColor = Color.White.copy(alpha = 0.8f)
+        )
+    }
 }
 
 @Composable
-private fun CommentItem(comment: Comment) {
+private fun CommentItem(
+    comment: Comment,
+    currentUid: String?,
+    postAuthorUid: String?,
+    isEditing: Boolean,
+    editingText: String,
+    isSaving: Boolean,
+    onStartEdit: () -> Unit,
+    onEditingTextChange: (String) -> Unit,
+    onSaveEdit: () -> Unit,
+    onCancelEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     var avatarBitmap by remember(comment.authorPhotoBase64) {
         mutableStateOf<ImageBitmap?>(null)
     }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val canEdit = currentUid != null && comment.authorUid == currentUid
+    val canDelete = currentUid != null && (
+            comment.authorUid == currentUid || postAuthorUid == currentUid
+            )
 
     LaunchedEffect(comment.authorPhotoBase64) {
         comment.authorPhotoBase64?.let { base64 ->
             withContext(Dispatchers.IO) {
                 try {
                     val bytes = android.util.Base64.decode(base64, android.util.Base64.NO_WRAP)
-                    avatarBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    avatarBitmap =
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
                 } catch (_: Exception) {
                     avatarBitmap = null
                 }
@@ -266,7 +362,10 @@ private fun CommentItem(comment: Comment) {
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = comment.authorName.ifBlank { "Unknown" },
                     color = Color.White,
@@ -285,16 +384,98 @@ private fun CommentItem(comment: Comment) {
                         fontSize = 12.sp
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (canEdit || canDelete) {
+                    Box {
+                        IconButton(
+                            onClick = { menuExpanded = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "Options",
+                                tint = Color.White.copy(alpha = 0.55f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                            shape = RoundedCornerShape(12.dp),
+                            containerColor = Color(0xFF131313)
+                        ) {
+                            if (canEdit) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit", color = Color.White) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        onStartEdit()
+                                    }
+                                )
+                            }
+                            if (canDelete) {
+                                DropdownMenuItem(
+                                    text = { Text("Delete", color = Color(0xFFFF6B6B)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showDeleteDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = comment.text,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
+            if (isEditing) {
+                OutlinedTextField(
+                    value = editingText,
+                    onValueChange = onEditingTextChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 6,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color.White.copy(alpha = 0.08f),
+                        unfocusedContainerColor = Color.White.copy(alpha = 0.08f),
+                        focusedBorderColor = Color.White.copy(alpha = 0.2f),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                        cursorColor = Color.White
+                    )
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = onCancelEdit,
+                        enabled = !isSaving
+                    ) {
+                        Text("Cancel", color = Color.White.copy(alpha = 0.7f))
+                    }
+                    TextButton(
+                        onClick = onSaveEdit,
+                        enabled = !isSaving && editingText.isNotBlank()
+                    ) {
+                        Text(
+                            text = if (isSaving) "Saving..." else "Save",
+                            color = Color(0xFF1D9BF0)
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = comment.text,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -304,6 +485,32 @@ private fun CommentItem(comment: Comment) {
                 fontSize = 11.sp
             )
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete comment?") },
+            text = { Text("This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    }
+                ) {
+                    Text("Delete", color = Color(0xFFFF6B6B))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = Color(0xFF1C1C1E),
+            titleContentColor = Color.White,
+            textContentColor = Color.White.copy(alpha = 0.8f)
+        )
     }
 }
 

@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.model.AuthProvider
+import com.vintra.app.domain.model.Post
 import com.vintra.app.domain.repository.CreatePostResult
 import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.repository.GetProfileResult
@@ -23,10 +24,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.random.Random
 
 private const val POST_TITLE_MAX_LENGTH = 100
 private const val POST_TEXT_MAX_LENGTH = 2000
 private const val POST_LINK_MAX_LENGTH = 500
+private const val FRESH_POST_WINDOW_MS = 2 * 60 * 1000L
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
@@ -41,9 +44,36 @@ class FeedViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
 
+    private var serverPosts: List<Post> = emptyList()
+
+    private var orderSeed: Long = System.nanoTime()
+
     init {
         _uiState.update { it.copy(currentUid = getCurrentUserUseCase()?.uid) }
         observeFeed()
+    }
+
+    fun onHomeResumed() {
+        orderSeed = System.nanoTime()
+        _uiState.update {
+            it.copy(posts = buildDisplayOrder(serverPosts))
+        }
+    }
+
+    private fun buildDisplayOrder(posts: List<Post>): List<Post> {
+        if (posts.isEmpty()) return posts
+
+        val now = System.currentTimeMillis()
+        val fresh = posts
+            .filter { now - it.createdAt <= FRESH_POST_WINDOW_MS }
+            .sortedByDescending { it.createdAt }
+
+        val freshIds = fresh.map { it.id }.toSet()
+        val rest = posts
+            .filter { it.id !in freshIds }
+            .shuffled(Random(orderSeed))
+
+        return fresh + rest
     }
 
     private fun observeFeed() {
@@ -51,11 +81,20 @@ class FeedViewModel @Inject constructor(
             observeFeedUseCase().collectLatest { result ->
                 when (result) {
                     is ObservePostsResult.Success -> {
-                        _uiState.update { it.copy(isLoadingFeed = false, posts = result.posts) }
+                        serverPosts = result.posts
+                        _uiState.update {
+                            it.copy(
+                                isLoadingFeed = false,
+                                posts = buildDisplayOrder(serverPosts)
+                            )
+                        }
                     }
                     is ObservePostsResult.Error -> {
                         _uiState.update {
-                            it.copy(isLoadingFeed = false, toastMessage = "Error loading feed. Please try again.")
+                            it.copy(
+                                isLoadingFeed = false,
+                                toastMessage = "Error loading feed. Please try again."
+                            )
                         }
                     }
                 }
@@ -96,15 +135,37 @@ class FeedViewModel @Inject constructor(
     fun toggleLike(postId: String) {
         val uid = _uiState.value.currentUid ?: return
 
+        serverPosts = serverPosts.map { post ->
+            if (post.id != postId) return@map post
+            val alreadyLiked = post.likedBy.contains(uid)
+            if (alreadyLiked) {
+                post.copy(
+                    likedBy = post.likedBy - uid,
+                    likeCount = (post.likeCount - 1).coerceAtLeast(0)
+                )
+            } else {
+                post.copy(
+                    likedBy = post.likedBy + uid,
+                    likeCount = post.likeCount + 1
+                )
+            }
+        }
+
         _uiState.update { state ->
             state.copy(
                 posts = state.posts.map { post ->
                     if (post.id != postId) return@map post
                     val alreadyLiked = post.likedBy.contains(uid)
                     if (alreadyLiked) {
-                        post.copy(likedBy = post.likedBy - uid, likeCount = (post.likeCount - 1).coerceAtLeast(0))
+                        post.copy(
+                            likedBy = post.likedBy - uid,
+                            likeCount = (post.likeCount - 1).coerceAtLeast(0)
+                        )
                     } else {
-                        post.copy(likedBy = post.likedBy + uid, likeCount = post.likeCount + 1)
+                        post.copy(
+                            likedBy = post.likedBy + uid,
+                            likeCount = post.likeCount + 1
+                        )
                     }
                 }
             )
@@ -124,14 +185,29 @@ class FeedViewModel @Inject constructor(
         val state = _uiState.value
         val uid = getCurrentUserUseCase()?.uid ?: return
 
-        if (state.postTitle.isBlank() && state.postText.isBlank() && state.postLinkUrl.isBlank() && state.postImageUri == null) {
-            _uiState.update { it.copy(toastMessage = "Add text, a title, a link, or an image before publishing.") }
+        if (
+            state.postTitle.isBlank() &&
+            state.postText.isBlank() &&
+            state.postLinkUrl.isBlank() &&
+            state.postImageUri == null
+        ) {
+            _uiState.update {
+                it.copy(
+                    toastMessage = "Add text, a title, a link, or an image before publishing."
+                )
+            }
             return
         }
 
         val normalizedLink = state.postLinkUrl.trim()
-        if (normalizedLink.isNotBlank() && !normalizedLink.startsWith("https://") && !normalizedLink.startsWith("http://")) {
-            _uiState.update { it.copy(toastMessage = "The link must begin with http:// or https://.") }
+        if (
+            normalizedLink.isNotBlank() &&
+            !normalizedLink.startsWith("https://") &&
+            !normalizedLink.startsWith("http://")
+        ) {
+            _uiState.update {
+                it.copy(toastMessage = "The link must begin with http:// or https://.")
+            }
             return
         }
 
@@ -174,12 +250,22 @@ class FeedViewModel @Inject constructor(
             ) {
                 is CreatePostResult.Success -> {
                     _uiState.update {
-                        it.copy(isPosting = false, postTitle = "", postText = "", postLinkUrl = "", postImageUri = null, postPublished = true)
+                        it.copy(
+                            isPosting = false,
+                            postTitle = "",
+                            postText = "",
+                            postLinkUrl = "",
+                            postImageUri = null,
+                            postPublished = true
+                        )
                     }
                 }
                 is CreatePostResult.Error -> {
                     _uiState.update {
-                        it.copy(isPosting = false, toastMessage = "Error publishing post. Please try again.")
+                        it.copy(
+                            isPosting = false,
+                            toastMessage = "Error publishing post. Please try again."
+                        )
                     }
                 }
             }

@@ -11,6 +11,13 @@ data class PostDetailUiState(
     val isLoadingComments: Boolean = true,
     val commentText: String = "",
     val isSendingComment: Boolean = false,
+    val editingCommentId: String? = null,
+    val editingCommentText: String = "",
+    val isSavingComment: Boolean = false,
+    val postDeleted: Boolean = false,
     val toastMessage: String? = null,
     val errorMessage: String? = null
-)
+) {
+    val isPostOwner: Boolean
+        get() = currentUid != null && post?.authorUid == currentUid
+}

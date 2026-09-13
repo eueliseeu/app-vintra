@@ -9,6 +9,7 @@ import com.vintra.app.data.model.UserProfileDto
 import com.vintra.app.domain.model.AuthProvider
 import com.vintra.app.domain.model.Post
 import com.vintra.app.domain.repository.CreatePostResult
+import com.vintra.app.domain.repository.DeletePostResult
 import com.vintra.app.domain.repository.ObservePostsResult
 import com.vintra.app.domain.repository.PostRepository
 import com.vintra.app.domain.repository.ToggleLikeResult
@@ -86,6 +87,24 @@ class PostRepositoryImpl @Inject constructor(
             }
 
         awaitClose { registration.remove() }
+    }
+
+    override suspend fun deletePost(
+        postId: String,
+        requesterUid: String
+    ): DeletePostResult {
+        return try {
+            val ref = firestore.collection(COLLECTION_POSTS).document(postId)
+            val snap = ref.get().await()
+            if (!snap.exists()) return DeletePostResult.Error("Post not found.")
+            if (snap.getString("authorUid") != requesterUid) {
+                return DeletePostResult.Error("You can only delete your own posts.")
+            }
+            ref.delete().await()
+            DeletePostResult.Success
+        } catch (e: Exception) {
+            DeletePostResult.Error(e.message ?: "Error deleting post.")
+        }
     }
 
     override suspend fun getPostById(postId: String): Post? = try {

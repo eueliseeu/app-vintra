@@ -6,13 +6,19 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.vintra.app.domain.model.Comment
 import com.vintra.app.domain.repository.CreateCommentResult
+import com.vintra.app.domain.repository.DeleteCommentResult
+import com.vintra.app.domain.repository.DeletePostResult
 import com.vintra.app.domain.repository.GetPhotoResult
 import com.vintra.app.domain.repository.GetProfileResult
 import com.vintra.app.domain.repository.ObserveCommentsResult
 import com.vintra.app.domain.repository.ToggleLikeResult
+import com.vintra.app.domain.repository.UpdateCommentResult
 import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.comment.CreateCommentUseCase
+import com.vintra.app.domain.usecase.comment.DeleteCommentUseCase
 import com.vintra.app.domain.usecase.comment.ObserveCommentsUseCase
+import com.vintra.app.domain.usecase.comment.UpdateCommentUseCase
+import com.vintra.app.domain.usecase.post.DeletePostUseCase
 import com.vintra.app.domain.usecase.post.GetPostByIdUseCase
 import com.vintra.app.domain.usecase.post.ToggleLikeUseCase
 import com.vintra.app.domain.usecase.profile.GetProfilePhotoUseCase
@@ -39,6 +45,9 @@ class PostDetailViewModel @Inject constructor(
     private val getPostByIdUseCase: GetPostByIdUseCase,
     private val observeCommentsUseCase: ObserveCommentsUseCase,
     private val createCommentUseCase: CreateCommentUseCase,
+    private val updateCommentUseCase: UpdateCommentUseCase,
+    private val deleteCommentUseCase: DeleteCommentUseCase,
+    private val deletePostUseCase: DeletePostUseCase,
     private val toggleLikeUseCase: ToggleLikeUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -68,9 +77,15 @@ class PostDetailViewModel @Inject constructor(
         val alreadyLiked = post.likedBy.contains(uid)
 
         val optimisticPost = if (alreadyLiked) {
-            post.copy(likedBy = post.likedBy - uid, likeCount = (post.likeCount - 1).coerceAtLeast(0))
+            post.copy(
+                likedBy = post.likedBy - uid,
+                likeCount = (post.likeCount - 1).coerceAtLeast(0)
+            )
         } else {
-            post.copy(likedBy = post.likedBy + uid, likeCount = post.likeCount + 1)
+            post.copy(
+                likedBy = post.likedBy + uid,
+                likeCount = post.likeCount + 1
+            )
         }
         _uiState.update { it.copy(post = optimisticPost) }
 
@@ -78,7 +93,9 @@ class PostDetailViewModel @Inject constructor(
             when (val result = toggleLikeUseCase(post.id, uid)) {
                 is ToggleLikeResult.Success -> Unit
                 is ToggleLikeResult.Error -> {
-                    _uiState.update { it.copy(post = post, toastMessage = result.message) }
+                    _uiState.update {
+                        it.copy(post = post, toastMessage = result.message)
+                    }
                 }
             }
         }
@@ -137,7 +154,8 @@ class PostDetailViewModel @Inject constructor(
                 it.copy(
                     isSendingComment = false,
                     commentText = "",
-                    comments = it.comments + optimisticComment
+                    comments = it.comments + optimisticComment,
+                    toastMessage = "Comment sent."
                 )
             }
 
@@ -164,6 +182,125 @@ class PostDetailViewModel @Inject constructor(
                             toastMessage = result.message
                         )
                     }
+                }
+            }
+        }
+    }
+
+    fun startEditComment(comment: Comment) {
+        val uid = _uiState.value.currentUid ?: return
+        if (comment.authorUid != uid) {
+            _uiState.update {
+                it.copy(toastMessage = "You can only edit your own comments.")
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                editingCommentId = comment.id,
+                editingCommentText = comment.text
+            )
+        }
+    }
+
+    fun onEditingCommentTextChange(text: String) {
+        _uiState.update {
+            it.copy(editingCommentText = text.take(COMMENT_MAX_LENGTH))
+        }
+    }
+
+    fun cancelEditComment() {
+        _uiState.update {
+            it.copy(editingCommentId = null, editingCommentText = "")
+        }
+    }
+
+    fun saveEditComment() {
+        val state = _uiState.value
+        val uid = state.currentUid ?: return
+        val commentId = state.editingCommentId ?: return
+        val text = state.editingCommentText.trim()
+        if (text.isBlank()) {
+            _uiState.update { it.copy(toastMessage = "Comment cannot be empty.") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSavingComment = true) }
+            when (val result = updateCommentUseCase(commentId, uid, text)) {
+                is UpdateCommentResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isSavingComment = false,
+                            editingCommentId = null,
+                            editingCommentText = "",
+                            toastMessage = "Comment updated."
+                        )
+                    }
+                }
+                is UpdateCommentResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isSavingComment = false,
+                            toastMessage = result.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun deleteComment(comment: Comment) {
+        val state = _uiState.value
+        val uid = state.currentUid ?: return
+        val post = state.post ?: return
+        val canDelete = comment.authorUid == uid || post.authorUid == uid
+        if (!canDelete) {
+            _uiState.update {
+                it.copy(toastMessage = "You cannot delete this comment.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            when (
+                val result = deleteCommentUseCase(
+                    commentId = comment.id,
+                    postId = post.id,
+                    requesterUid = uid,
+                    postAuthorUid = post.authorUid
+                )
+            ) {
+                is DeleteCommentResult.Success -> {
+                    _uiState.update { it.copy(toastMessage = "Comment deleted.") }
+                }
+                is DeleteCommentResult.Error -> {
+                    _uiState.update { it.copy(toastMessage = result.message) }
+                }
+            }
+        }
+    }
+
+    fun deletePost() {
+        val state = _uiState.value
+        val uid = state.currentUid ?: return
+        val post = state.post ?: return
+        if (post.authorUid != uid) {
+            _uiState.update {
+                it.copy(toastMessage = "You can only delete your own posts.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            when (val result = deletePostUseCase(post.id, uid)) {
+                is DeletePostResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            postDeleted = true,
+                            toastMessage = "Post deleted."
+                        )
+                    }
+                }
+                is DeletePostResult.Error -> {
+                    _uiState.update { it.copy(toastMessage = result.message) }
                 }
             }
         }
@@ -196,7 +333,6 @@ class PostDetailViewModel @Inject constructor(
                                                     abs(server.createdAt - temp.createdAt) < TEMP_MATCH_WINDOW_MS
                                         }
                             }
-
                             current.copy(
                                 isLoadingComments = false,
                                 comments = result.comments + pendingTemps,

@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
@@ -69,18 +71,8 @@ fun CreatePostScreen(
                 .statusBarsPadding()
                 .padding(horizontal = 20.dp)
         ) {
-            VintraTopBar(
-                photoBase64 = topBarState.photoBase64,
-                isUploadingPhoto = topBarState.isUploadingPhoto,
-                username = topBarState.username,
-                isVerified = topBarState.isVerified,
-                onPhotoPicked = topBarViewModel::onPhotoPicked,
-                onProfileClick = onProfileClick,
-                onLogout = {
-                    topBarViewModel.logout()
-                    onLogout()
-                }
-            )
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier

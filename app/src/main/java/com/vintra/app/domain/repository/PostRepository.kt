@@ -19,6 +19,11 @@ sealed interface ToggleLikeResult {
     data class Error(val message: String) : ToggleLikeResult
 }
 
+sealed interface DeletePostResult {
+    data object Success : DeletePostResult
+    data class Error(val message: String) : DeletePostResult
+}
+
 interface PostRepository {
     suspend fun createPost(
         authorUid: String,
@@ -38,4 +43,6 @@ interface PostRepository {
     suspend fun getPostById(postId: String): Post?
 
     suspend fun toggleLike(postId: String, uid: String): ToggleLikeResult
+
+    suspend fun deletePost(postId: String, requesterUid: String): DeletePostResult
 }
