@@ -9,6 +9,16 @@ sealed interface CreateJobResult {
     data class Error(val message: String) : CreateJobResult
 }
 
+sealed interface UpdateJobResult {
+    data object Success : UpdateJobResult
+    data class Error(val message: String) : UpdateJobResult
+}
+
+sealed interface DeleteJobResult {
+    data object Success : DeleteJobResult
+    data class Error(val message: String) : DeleteJobResult
+}
+
 sealed interface ObserveJobsResult {
     data class Success(val jobs: List<Job>) : ObserveJobsResult
     data class Error(val message: String) : ObserveJobsResult
@@ -26,6 +36,19 @@ interface JobRepository {
         buttonLabel: String,
         tags: List<JobTag>
     ): CreateJobResult
+
+    suspend fun updateJob(
+        jobId: String,
+        publisherUid: String,
+        companyPhotoBase64: String?,
+        title: String,
+        description: String,
+        linkUrl: String,
+        buttonLabel: String,
+        tags: List<JobTag>
+    ): UpdateJobResult
+
+    suspend fun deleteJob(jobId: String, requesterUid: String): DeleteJobResult
 
     fun observeJobs(limit: Long = 50): Flow<ObserveJobsResult>
 
