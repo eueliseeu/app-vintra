@@ -3,6 +3,7 @@ package com.vintra.app.ui.jobs
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vintra.app.domain.repository.ObserveJobsResult
+import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
 import com.vintra.app.domain.usecase.job.ObserveJobsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,10 +16,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class JobsViewModel @Inject constructor(
-    private val observeJobsUseCase: ObserveJobsUseCase
+    private val observeJobsUseCase: ObserveJobsUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(JobsUiState())
+    private val _uiState = MutableStateFlow(
+        JobsUiState(currentUid = getCurrentUserUseCase()?.uid)
+    )
     val uiState: StateFlow<JobsUiState> = _uiState.asStateFlow()
 
     init {
@@ -27,6 +31,10 @@ class JobsViewModel @Inject constructor(
 
     fun onSearchQueryChange(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun onFeedTabSelected(tab: JobFeedTab) {
+        _uiState.update { it.copy(selectedFeedTab = tab) }
     }
 
     private fun observeJobs() {

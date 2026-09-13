@@ -8,8 +8,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,8 +48,9 @@ import kotlinx.coroutines.withContext
 @Composable
 fun JobCard(
     job: Job,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     descriptionMaxChars: Int? = 180,
+    showOpenButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -73,19 +76,23 @@ fun JobCard(
         } ?: run { avatarBitmap = null }
     }
 
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .height(IntrinsicSize.Min)
             .padding(horizontal = 16.dp, vertical = 12.dp)
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick)
+                else Modifier
+            )
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(end = 12.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
@@ -97,7 +104,7 @@ fun JobCard(
                         contentDescription = "Company logo",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                     )
                 } else {
@@ -110,96 +117,101 @@ fun JobCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = job.companyName.ifBlank { "Company" },
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                if (job.companyUsername.isNotBlank()) {
-                    Text(
-                        text = "@${job.companyUsername}",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 13.sp
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = job.title,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 17.sp
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = displayDescription,
-            color = Color.White.copy(alpha = 0.75f),
-            fontSize = 14.sp,
-            lineHeight = 20.sp
-        )
-
-        if (job.tags.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                job.tags.forEach { tag ->
-                    Text(
-                        text = tag.label,
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 11.sp,
-                        modifier = Modifier
-                            .padding(end = 6.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
+
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight()
+                    .background(Color.White.copy(alpha = 0.15f))
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = job.companyName.ifBlank { "Company" },
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                maxLines = 1
+            )
+            if (job.companyUsername.isNotBlank()) {
+                Text(
+                    text = "@${job.companyUsername}",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 13.sp
+                )
+            }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Button(
-                onClick = {
-                    runCatching {
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse(job.linkUrl))
+            if (job.title.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = job.title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (job.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = displayDescription,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            }
+
+            if (job.tags.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row {
+                    job.tags.forEach { tag ->
+                        Text(
+                            text = tag.label,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
-                },
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1D9BF0),
-                    contentColor = Color.White
-                ),
-                contentPadding = ButtonDefaults.ContentPadding
-            ) {
-                Text(
-                    text = job.buttonLabel.ifBlank { "Open" },
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
+                }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Post ${formatPostTimestamp(job.createdAt)}",
+                text = "Created ${formatPostTimestamp(job.createdAt)}",
                 color = Color.White.copy(alpha = 0.4f),
                 fontSize = 12.sp
             )
+
+            if (showOpenButton) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(job.linkUrl))
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1D9BF0),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = job.buttonLabel.ifBlank { "Open" },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
     }
 }

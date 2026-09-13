@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.vintra.app.domain.repository.DeleteJobResult
+import com.vintra.app.domain.usecase.auth.GetCurrentUserUseCase
+import com.vintra.app.domain.usecase.job.DeleteJobUseCase
 import com.vintra.app.domain.usecase.job.GetJobByIdUseCase
 import com.vintra.app.ui.navigation.JobDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class JobDetailViewModel @Inject constructor(
     private val getJobByIdUseCase: GetJobByIdUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val deleteJobUseCase: DeleteJobUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -26,7 +31,39 @@ class JobDetailViewModel @Inject constructor(
     val uiState: StateFlow<JobDetailUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update { it.copy(currentUid = getCurrentUserUseCase()?.uid) }
         load()
+    }
+
+    fun clearToast() {
+        _uiState.update { it.copy(toastMessage = null) }
+    }
+
+    fun deleteJob() {
+        val state = _uiState.value
+        val uid = state.currentUid ?: return
+        val job = state.job ?: return
+        if (job.publisherUid != uid) {
+            _uiState.update {
+                it.copy(toastMessage = "You can only delete your own jobs.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            when (val result = deleteJobUseCase(job.id, uid)) {
+                is DeleteJobResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            jobDeleted = true,
+                            toastMessage = "Job deleted."
+                        )
+                    }
+                }
+                is DeleteJobResult.Error -> {
+                    _uiState.update { it.copy(toastMessage = result.message) }
+                }
+            }
+        }
     }
 
     private fun load() {
