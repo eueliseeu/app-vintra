@@ -8,7 +8,9 @@ import com.vintra.app.data.model.UserProfileDto
 import com.vintra.app.domain.model.Comment
 import com.vintra.app.domain.repository.CommentRepository
 import com.vintra.app.domain.repository.CreateCommentResult
+import com.vintra.app.domain.repository.DeleteCommentResult
 import com.vintra.app.domain.repository.ObserveCommentsResult
+import com.vintra.app.domain.repository.UpdateCommentResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,63 +57,120 @@ class CommentRepositoryImpl @Inject constructor(
         firestore.runTransaction { transaction ->
             val postSnapshot = transaction.get(postRef)
             if (!postSnapshot.exists()) {
-                throw Exception("Post não encontrado.")
+                throw Exception("Post not found.")
             }
-
             val currentCount = postSnapshot.getLong("commentCount") ?: 0L
-
             transaction.set(commentRef, commentData)
             transaction.update(postRef, "commentCount", currentCount + 1)
         }.await()
 
         CreateCommentResult.Success(commentRef.id)
     } catch (exception: Exception) {
-        CreateCommentResult.Error(exception.message ?: "Erro ao comentar.")
+        CreateCommentResult.Error(exception.message ?: "Error commenting.")
     }
 
-    override fun observeComments(postId: String, limit: Long): Flow<ObserveCommentsResult> = callbackFlow {
-        if (postId.isBlank()) {
-            trySend(ObserveCommentsResult.Error("postId inválido."))
-            close()
-            return@callbackFlow
+    override suspend fun updateComment(
+        commentId: String,
+        editorUid: String,
+        text: String
+    ): UpdateCommentResult {
+        return try {
+            val ref = firestore.collection(COLLECTION_COMMENTS).document(commentId)
+            val snap = ref.get().await()
+            if (!snap.exists()) {
+                return UpdateCommentResult.Error("Comment not found.")
+            }
+            if (snap.getString("authorUid") != editorUid) {
+                return UpdateCommentResult.Error("You can only edit your own comments.")
+            }
+            val trimmed = text.trim()
+            if (trimmed.isBlank()) {
+                return UpdateCommentResult.Error("Comment cannot be empty.")
+            }
+            ref.update("text", trimmed).await()
+            UpdateCommentResult.Success
+        } catch (exception: Exception) {
+            UpdateCommentResult.Error(exception.message ?: "Error updating comment.")
         }
+    }
 
-        val registration = firestore.collection(COLLECTION_COMMENTS)
-            .whereEqualTo("postId", postId)
-            .orderBy("createdAt", Query.Direction.ASCENDING)
-            .limit(limit)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(
-                        ObserveCommentsResult.Error(
-                            error.message ?: "Erro ao carregar comentários."
-                        )
+    override suspend fun deleteComment(
+        commentId: String,
+        postId: String,
+        requesterUid: String,
+        postAuthorUid: String
+    ): DeleteCommentResult {
+        return try {
+            val commentRef = firestore.collection(COLLECTION_COMMENTS).document(commentId)
+            val postRef = firestore.collection(COLLECTION_POSTS).document(postId)
+
+            firestore.runTransaction { transaction ->
+                val commentSnap = transaction.get(commentRef)
+                if (!commentSnap.exists()) {
+                    throw Exception("Comment not found.")
+                }
+                val commentAuthor = commentSnap.getString("authorUid")
+                val canDelete =
+                    commentAuthor == requesterUid || postAuthorUid == requesterUid
+                if (!canDelete) {
+                    throw Exception("You cannot delete this comment.")
+                }
+                val postSnap = transaction.get(postRef)
+                val currentCount = postSnap.getLong("commentCount") ?: 0L
+                transaction.delete(commentRef)
+                if (postSnap.exists()) {
+                    transaction.update(
+                        postRef,
+                        "commentCount",
+                        (currentCount - 1).coerceAtLeast(0L)
                     )
-                    return@addSnapshotListener
                 }
+            }.await()
 
-                val comments = snapshot?.documents.orEmpty().mapNotNull { document ->
-                    document.toObject(CommentDto::class.java)?.toDomain(document.id)
-                }
+            DeleteCommentResult.Success
+        } catch (exception: Exception) {
+            DeleteCommentResult.Error(exception.message ?: "Error deleting comment.")
+        }
+    }
 
-                // Enriquece com isVerified ao vivo do perfil do autor
-                scope.launch {
-                    val enriched = enrichCommentsWithVerification(comments)
-                    trySend(ObserveCommentsResult.Success(enriched))
-                }
+    override fun observeComments(postId: String, limit: Long): Flow<ObserveCommentsResult> =
+        callbackFlow {
+            if (postId.isBlank()) {
+                trySend(ObserveCommentsResult.Error("Invalid postId."))
+                close()
+                return@callbackFlow
             }
 
-        awaitClose { registration.remove() }
-    }
+            val registration = firestore.collection(COLLECTION_COMMENTS)
+                .whereEqualTo("postId", postId)
+                .orderBy("createdAt", Query.Direction.ASCENDING)
+                .limit(limit)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        trySend(
+                            ObserveCommentsResult.Error(
+                                error.message ?: "Error loading comments."
+                            )
+                        )
+                        return@addSnapshotListener
+                    }
+                    val comments = snapshot?.documents.orEmpty().mapNotNull { document ->
+                        document.toObject(CommentDto::class.java)?.toDomain(document.id)
+                    }
+                    scope.launch {
+                        val enriched = enrichCommentsWithVerification(comments)
+                        trySend(ObserveCommentsResult.Success(enriched))
+                    }
+                }
+
+            awaitClose { registration.remove() }
+        }
 
     private suspend fun enrichCommentsWithVerification(comments: List<Comment>): List<Comment> {
         if (comments.isEmpty()) return comments
-
         val uids = comments.map { it.authorUid }.distinct().filter { it.isNotBlank() }
         if (uids.isEmpty()) return comments
-
         val verifiedMap = mutableMapOf<String, Boolean>()
-
         uids.forEach { uid ->
             try {
                 val snap = firestore.collection(COLLECTION_USERS).document(uid).get().await()
@@ -120,7 +179,6 @@ class CommentRepositoryImpl @Inject constructor(
                 verifiedMap[uid] = false
             }
         }
-
         return comments.map { comment ->
             comment.copy(isVerified = verifiedMap[comment.authorUid] == true)
         }

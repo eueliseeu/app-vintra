@@ -8,6 +8,16 @@ sealed interface CreateCommentResult {
     data class Error(val message: String) : CreateCommentResult
 }
 
+sealed interface UpdateCommentResult {
+    data object Success : UpdateCommentResult
+    data class Error(val message: String) : UpdateCommentResult
+}
+
+sealed interface DeleteCommentResult {
+    data object Success : DeleteCommentResult
+    data class Error(val message: String) : DeleteCommentResult
+}
+
 sealed interface ObserveCommentsResult {
     data class Success(val comments: List<Comment>) : ObserveCommentsResult
     data class Error(val message: String) : ObserveCommentsResult
@@ -23,6 +33,19 @@ interface CommentRepository {
         text: String,
         isVerified: Boolean
     ): CreateCommentResult
+
+    suspend fun updateComment(
+        commentId: String,
+        editorUid: String,
+        text: String
+    ): UpdateCommentResult
+
+    suspend fun deleteComment(
+        commentId: String,
+        postId: String,
+        requesterUid: String,
+        postAuthorUid: String
+    ): DeleteCommentResult
 
     fun observeComments(postId: String, limit: Long = 50): Flow<ObserveCommentsResult>
 }
