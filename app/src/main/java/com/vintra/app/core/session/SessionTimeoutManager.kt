@@ -8,7 +8,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val TIMEOUT_MILLIS = 5 * 1000L
+private const val TIMEOUT_MILLIS = 2 * 60 * 1000L
 private const val PREFS_NAME = "vintra_session_prefs"
 private const val KEY_BACKGROUND_TIMESTAMP = "background_timestamp"
 
