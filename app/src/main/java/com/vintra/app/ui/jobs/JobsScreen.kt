@@ -29,6 +29,7 @@ import com.vintra.app.ui.components.HomeGreetingHeader
 import com.vintra.app.ui.components.appTextFieldColors
 import com.vintra.app.ui.home.HomeViewModel
 import com.vintra.app.ui.home.components.EventBannerCarousel
+import com.vintra.app.ui.home.components.EventBannerPlacement
 import com.vintra.app.ui.jobs.components.JobCard
 import com.vintra.app.ui.jobs.components.JobFeedTabs
 import com.vintra.app.ui.navigation.BottomTab
@@ -42,6 +43,7 @@ fun JobsScreen(
     onLogout: () -> Unit,
     onJobClick: (String) -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateToFaq: () -> Unit = {},
     viewModel: JobsViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -52,7 +54,11 @@ fun JobsScreen(
     AuthenticatedScaffold(
         selectedTab = BottomTab.STATEMENT,
         onTabSelected = { tab ->
-            if (tab == BottomTab.HOME) onNavigateToHome()
+            when (tab) {
+                BottomTab.HOME -> onNavigateToHome()
+                BottomTab.STATEMENT -> Unit
+                BottomTab.RANKING -> onNavigateToFaq()
+            }
         },
         onCreatePost = onCreatePost,
         onCreateJob = onCreateJob,
@@ -81,7 +87,9 @@ fun JobsScreen(
                         .padding(bottom = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    EventBannerCarousel()
+                    EventBannerCarousel(
+                        placement = EventBannerPlacement.JOBS
+                    )
                 }
             }
 

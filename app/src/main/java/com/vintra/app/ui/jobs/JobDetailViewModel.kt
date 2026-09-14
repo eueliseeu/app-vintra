@@ -59,11 +59,16 @@ class JobDetailViewModel @Inject constructor(
                         )
                     }
                 }
+
                 is DeleteJobResult.Error -> {
                     _uiState.update { it.copy(toastMessage = result.message) }
                 }
             }
         }
+    }
+
+    fun reload() {
+        load()
     }
 
     private fun load() {

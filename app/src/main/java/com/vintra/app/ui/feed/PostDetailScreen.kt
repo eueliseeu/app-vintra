@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,6 +57,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vintra.app.core.util.formatPostTimestamp
 import com.vintra.app.domain.model.Comment
 import com.vintra.app.ui.components.CenterToast
@@ -72,11 +75,22 @@ private const val TOAST_DURATION_MS = 2500L
 @Composable
 fun PostDetailScreen(
     onBack: () -> Unit,
+    onEdit: (String) -> Unit = {},
     viewModel: PostDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    var showDeletePostDialog by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.reload()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var postMenuExpanded by remember { mutableStateOf(false) }
+    var showDeletePostDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.toastMessage) {
         if (state.toastMessage != null) {
@@ -97,8 +111,13 @@ fun PostDetailScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    val username = state.post?.authorUsername.orEmpty()
                     Text(
-                        text = "Post",
+                        text = if (username.isNotBlank()) {
+                            "Post / @$username"
+                        } else {
+                            "Post"
+                        },
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -113,7 +132,7 @@ fun PostDetailScreen(
                     }
                 },
                 actions = {
-                    if (state.isPostOwner) {
+                    if (state.isPostOwner && state.post != null) {
                         Box {
                             IconButton(onClick = { postMenuExpanded = true }) {
                                 Icon(
@@ -128,6 +147,13 @@ fun PostDetailScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 containerColor = Color(0xFF131313)
                             ) {
+                                DropdownMenuItem(
+                                    text = { Text("Edit post", color = Color.White) },
+                                    onClick = {
+                                        postMenuExpanded = false
+                                        onEdit(state.post!!.id)
+                                    }
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Delete post", color = Color(0xFFFF6B6B)) },
                                     onClick = {
@@ -237,19 +263,7 @@ fun PostDetailScreen(
                                     items = state.comments,
                                     key = { it.id }
                                 ) { comment ->
-                                    CommentItem(
-                                        comment = comment,
-                                        currentUid = state.currentUid,
-                                        postAuthorUid = state.post?.authorUid,
-                                        isEditing = state.editingCommentId == comment.id,
-                                        editingText = state.editingCommentText,
-                                        isSaving = state.isSavingComment,
-                                        onStartEdit = { viewModel.startEditComment(comment) },
-                                        onEditingTextChange = viewModel::onEditingCommentTextChange,
-                                        onSaveEdit = viewModel::saveEditComment,
-                                        onCancelEdit = viewModel::cancelEditComment,
-                                        onDelete = { viewModel.deleteComment(comment) }
-                                    )
+                                    CommentItem(comment = comment)
                                 }
                             }
                         }
@@ -289,29 +303,10 @@ fun PostDetailScreen(
 }
 
 @Composable
-private fun CommentItem(
-    comment: Comment,
-    currentUid: String?,
-    postAuthorUid: String?,
-    isEditing: Boolean,
-    editingText: String,
-    isSaving: Boolean,
-    onStartEdit: () -> Unit,
-    onEditingTextChange: (String) -> Unit,
-    onSaveEdit: () -> Unit,
-    onCancelEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
+private fun CommentItem(comment: Comment) {
     var avatarBitmap by remember(comment.authorPhotoBase64) {
         mutableStateOf<ImageBitmap?>(null)
     }
-    var menuExpanded by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    val canEdit = currentUid != null && comment.authorUid == currentUid
-    val canDelete = currentUid != null && (
-            comment.authorUid == currentUid || postAuthorUid == currentUid
-            )
 
     LaunchedEffect(comment.authorPhotoBase64) {
         comment.authorPhotoBase64?.let { base64 ->
@@ -362,10 +357,7 @@ private fun CommentItem(
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = comment.authorName.ifBlank { "Unknown" },
                     color = Color.White,
@@ -384,100 +376,18 @@ private fun CommentItem(
                         fontSize = 12.sp
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                if (canEdit || canDelete) {
-                    Box {
-                        IconButton(
-                            onClick = { menuExpanded = true },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = "Options",
-                                tint = Color.White.copy(alpha = 0.55f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                            shape = RoundedCornerShape(12.dp),
-                            containerColor = Color(0xFF131313)
-                        ) {
-                            if (canEdit) {
-                                DropdownMenuItem(
-                                    text = { Text("Edit", color = Color.White) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onStartEdit()
-                                    }
-                                )
-                            }
-                            if (canDelete) {
-                                DropdownMenuItem(
-                                    text = { Text("Delete", color = Color(0xFFFF6B6B)) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        showDeleteDialog = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.heightIn(min = 4.dp))
 
-            if (isEditing) {
-                OutlinedTextField(
-                    value = editingText,
-                    onValueChange = onEditingTextChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 6,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.08f),
-                        focusedBorderColor = Color.White.copy(alpha = 0.2f),
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
-                        cursorColor = Color.White
-                    )
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(
-                        onClick = onCancelEdit,
-                        enabled = !isSaving
-                    ) {
-                        Text("Cancel", color = Color.White.copy(alpha = 0.7f))
-                    }
-                    TextButton(
-                        onClick = onSaveEdit,
-                        enabled = !isSaving && editingText.isNotBlank()
-                    ) {
-                        Text(
-                            text = if (isSaving) "Saving..." else "Save",
-                            color = Color(0xFF1D9BF0)
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = comment.text,
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                )
-            }
+            Text(
+                text = comment.text,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.heightIn(min = 4.dp))
 
             Text(
                 text = formatPostTimestamp(comment.createdAt),
@@ -485,32 +395,6 @@ private fun CommentItem(
                 fontSize = 11.sp
             )
         }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete comment?") },
-            text = { Text("This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDelete()
-                    }
-                ) {
-                    Text("Delete", color = Color(0xFFFF6B6B))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = Color(0xFF1C1C1E),
-            titleContentColor = Color.White,
-            textContentColor = Color.White.copy(alpha = 0.8f)
-        )
     }
 }
 

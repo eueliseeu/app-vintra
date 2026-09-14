@@ -57,6 +57,7 @@ fun HomeScreen(
     onLogout: () -> Unit,
     onPostClick: (String) -> Unit,
     onNavigateToJobs: () -> Unit = {},
+    onNavigateToFaq: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     feedViewModel: FeedViewModel = hiltViewModel()
 ) {
@@ -99,7 +100,7 @@ fun HomeScreen(
             when (tab) {
                 BottomTab.HOME -> selectedTab = BottomTab.HOME
                 BottomTab.STATEMENT -> onNavigateToJobs()
-                BottomTab.RANKING -> selectedTab = tab
+                BottomTab.RANKING -> onNavigateToFaq()
             }
         },
         onCreatePost = onCreatePost,
@@ -143,6 +144,9 @@ fun HomeScreen(
                                     .padding(bottom = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
+                                EventBannerCarousel(
+                                    placement = EventBannerPlacement.HOME
+                                )
                             }
 
                             HomeFeedTabs(
