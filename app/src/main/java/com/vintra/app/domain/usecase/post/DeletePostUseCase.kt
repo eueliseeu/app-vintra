@@ -9,4 +9,6 @@ class DeletePostUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(postId: String, requesterUid: String): DeletePostResult =
         postRepository.deletePost(postId, requesterUid)
+
 }
+

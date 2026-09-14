@@ -9,6 +9,16 @@ sealed interface CreatePostResult {
     data class Error(val message: String) : CreatePostResult
 }
 
+sealed interface UpdatePostResult {
+    data object Success : UpdatePostResult
+    data class Error(val message: String) : UpdatePostResult
+}
+
+sealed interface DeletePostResult {
+    data object Success : DeletePostResult
+    data class Error(val message: String) : DeletePostResult
+}
+
 sealed interface ObservePostsResult {
     data class Success(val posts: List<Post>) : ObservePostsResult
     data class Error(val message: String) : ObservePostsResult
@@ -17,11 +27,6 @@ sealed interface ObservePostsResult {
 sealed interface ToggleLikeResult {
     data object Success : ToggleLikeResult
     data class Error(val message: String) : ToggleLikeResult
-}
-
-sealed interface DeletePostResult {
-    data object Success : DeletePostResult
-    data class Error(val message: String) : DeletePostResult
 }
 
 interface PostRepository {
@@ -38,11 +43,20 @@ interface PostRepository {
         isVerified: Boolean
     ): CreatePostResult
 
+    suspend fun updatePost(
+        postId: String,
+        authorUid: String,
+        title: String,
+        text: String,
+        linkUrl: String,
+        imageBase64: String?
+    ): UpdatePostResult
+
+    suspend fun deletePost(postId: String, requesterUid: String): DeletePostResult
+
     fun observeFeed(limit: Long = 30): Flow<ObservePostsResult>
 
     suspend fun getPostById(postId: String): Post?
 
     suspend fun toggleLike(postId: String, uid: String): ToggleLikeResult
-
-    suspend fun deletePost(postId: String, requesterUid: String): DeletePostResult
 }

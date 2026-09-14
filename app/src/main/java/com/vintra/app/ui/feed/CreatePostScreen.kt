@@ -40,11 +40,12 @@ fun CreatePostScreen(
     onPostSuccess: () -> Unit,
     onProfileClick: () -> Unit,
     onLogout: () -> Unit,
-    viewModel: FeedViewModel = hiltViewModel(),
+    viewModel: CreatePostViewModel = hiltViewModel(),
     topBarViewModel: VintraTopBarViewModel = hiltViewModel()
 ) {
     val feedState by viewModel.uiState.collectAsState()
     val topBarState by topBarViewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(feedState.postPublished) {
         if (feedState.postPublished) {
@@ -88,7 +89,7 @@ fun CreatePostScreen(
                     )
                 }
                 Text(
-                    text = "New Post",
+                    text = if (state.isEditMode) "Edit Post" else "New Post",
                     color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp

@@ -24,7 +24,9 @@ data class PostDetailRoute(val postId: String)
 data class JobDetailRoute(val jobId: String)
 
 @Serializable
-data object CreatePostRoute
+data class CreatePostRoute(val postId: String = "")
 
+@Serializable
+data object FaqRoute
 @Serializable
 data class CreateJobRoute(val jobId: String = "")

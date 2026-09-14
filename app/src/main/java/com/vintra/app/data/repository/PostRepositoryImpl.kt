@@ -13,6 +13,7 @@ import com.vintra.app.domain.repository.DeletePostResult
 import com.vintra.app.domain.repository.ObservePostsResult
 import com.vintra.app.domain.repository.PostRepository
 import com.vintra.app.domain.repository.ToggleLikeResult
+import com.vintra.app.domain.repository.UpdatePostResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +67,7 @@ class PostRepositoryImpl @Inject constructor(
         CreatePostResult.Error(exception.message ?: "Error publishing the post.")
     }
 
+
     override fun observeFeed(limit: Long): Flow<ObservePostsResult> = callbackFlow {
         val registration = firestore.collection(COLLECTION_POSTS)
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -89,6 +91,39 @@ class PostRepositoryImpl @Inject constructor(
         awaitClose { registration.remove() }
     }
 
+    override suspend fun updatePost(
+        postId: String,
+        authorUid: String,
+        title: String,
+        text: String,
+        linkUrl: String,
+        imageBase64: String?
+    ): UpdatePostResult {
+        return try {
+            val ref = firestore.collection(COLLECTION_POSTS).document(postId)
+            val snap = ref.get().await()
+            if (!snap.exists()) {
+                return UpdatePostResult.Error("Post not found.")
+            }
+            if (snap.getString("authorUid") != authorUid) {
+                return UpdatePostResult.Error("You can only edit your own posts.")
+            }
+
+            val data = mutableMapOf<String, Any>(
+                "title" to title,
+                "text" to text,
+                "linkUrl" to linkUrl
+            )
+            if (imageBase64 != null) {
+                data["imageBase64"] = imageBase64
+            }
+            ref.update(data).await()
+            UpdatePostResult.Success
+        } catch (e: Exception) {
+            UpdatePostResult.Error(e.message ?: "Error updating post.")
+        }
+    }
+
     override suspend fun deletePost(
         postId: String,
         requesterUid: String
@@ -96,7 +131,9 @@ class PostRepositoryImpl @Inject constructor(
         return try {
             val ref = firestore.collection(COLLECTION_POSTS).document(postId)
             val snap = ref.get().await()
-            if (!snap.exists()) return DeletePostResult.Error("Post not found.")
+            if (!snap.exists()) {
+                return DeletePostResult.Error("Post not found.")
+            }
             if (snap.getString("authorUid") != requesterUid) {
                 return DeletePostResult.Error("You can only delete your own posts.")
             }
