@@ -93,7 +93,6 @@ com.vintra.app/
 4. Habilitar Authentication (Google e GitHub) e Firestore
 5. Sincronizar o Gradle e executar no emulador ou dispositivo físico
 
----
 
 ## Observações acadêmicas
 
@@ -102,15 +101,15 @@ com.vintra.app/
 - Foco em usabilidade mobile, fluxos de navegação e integração Firebase
 - Testes automatizados não fazem parte do escopo desta entrega
 
----
 
 ## Autores
 
-Ana Júlia Brum  124222016
-Bruno Resende Ribeiro - 124220140
-Gustavo Morais - 1242022304
-Fabricio Rocha - 125111399975
-Maycon Soares - 125111404445
-Eliseu Silva - 124220479
-Gustavo Silva Lourenço - 125111410319
-Lucca Lommez - 1261948642
+* Ana Júlia Brum — 124222016
+* Bruno Resende Ribeiro — 124220140
+* Gustavo Morais — 1242022304
+* Fabricio Rocha — 125111399975
+* Maycon Soares — 125111404445
+* Eliseu Silva — 124220479
+* Gustavo Silva Lourenço — 125111410319
+* Lucca Lommez — 1261948642
+
